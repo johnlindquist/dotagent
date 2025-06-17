@@ -6,16 +6,16 @@ import type { RuleBlock, ExportOptions } from './types.js'
 
 export function toAgentMarkdown(rules: RuleBlock[]): string {
   const sections: string[] = []
-  
+
   for (const rule of rules) {
     const { metadata, content } = rule
-    
+
     // Extract id and other metadata
     const { id, ...otherMetadata } = metadata
-    
+
     // Build the comment starting with @<id>
     let metaComment = `<!-- @${id}`
-    
+
     // If there are other metadata properties, add them
     if (Object.keys(otherMetadata).length > 0) {
       // Format remaining metadata as YAML
@@ -23,16 +23,16 @@ export function toAgentMarkdown(rules: RuleBlock[]): string {
         flowLevel: 1,
         lineWidth: -1
       }).trim()
-      
+
       metaComment += `\n${metaYaml}`
     }
-    
+
     metaComment += ' -->'
-    
+
     // Add section
     sections.push(`${metaComment}\n\n${content}`)
   }
-  
+
   return sections.join('\n\n')
 }
 
@@ -41,7 +41,7 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {
   const content = rules
     .map(rule => rule.content)
     .join('\n\n---\n\n')
-  
+
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
 }
@@ -49,28 +49,28 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {
 export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
   const rulesDir = join(outputDir, '.cursor', 'rules')
   mkdirSync(rulesDir, { recursive: true })
-  
+
   for (const rule of rules) {
     const filename = `${rule.metadata.id || 'rule'}.mdc`
     const filePath = join(rulesDir, filename)
-    
+
     // Prepare front matter data - filter out undefined values
     const frontMatterBase: Record<string, unknown> = {}
-    
+
     if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
     if (rule.metadata.globs !== undefined) frontMatterBase.globs = rule.metadata.globs
     if (rule.metadata.manual !== undefined) frontMatterBase.manual = rule.metadata.manual
-    
+
     // Add other metadata fields
-    Object.entries(rule.metadata).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(rule.metadata)) {
       if (!['id', 'description', 'alwaysApply', 'globs', 'manual'].includes(key) && value !== undefined) {
         frontMatterBase[key] = value
       }
-    })
-    
+    }
+
     const frontMatter = frontMatterBase
-    
+
     // Create MDC content
     const mdcContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdcContent, 'utf-8')
@@ -86,14 +86,14 @@ export function exportToCline(rules: RuleBlock[], outputPath: string): void {
         return header + rule.content
       })
       .join('\n\n')
-    
+
     ensureDirectoryExists(outputPath)
     writeFileSync(outputPath, content, 'utf-8')
   } else {
     // Directory mode
     const rulesDir = join(outputPath, '.clinerules')
     mkdirSync(rulesDir, { recursive: true })
-    
+
     rules.forEach((rule, index) => {
       const filename = `${String(index + 1).padStart(2, '0')}-${rule.metadata.id || 'rule'}.md`
       const filePath = join(rulesDir, filename)
@@ -106,7 +106,7 @@ export function exportToWindsurf(rules: RuleBlock[], outputPath: string): void {
   const content = rules
     .map(rule => rule.content)
     .join('\n\n')
-  
+
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
 }
@@ -115,7 +115,7 @@ export function exportToZed(rules: RuleBlock[], outputPath: string): void {
   const content = rules
     .map(rule => rule.content)
     .join('\n\n')
-  
+
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
 }
@@ -127,7 +127,7 @@ export function exportToCodex(rules: RuleBlock[], outputPath: string): void {
       return header + rule.content
     })
     .join('\n\n')
-  
+
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
 }
@@ -136,7 +136,7 @@ export function exportToAider(rules: RuleBlock[], outputPath: string): void {
   const content = rules
     .map(rule => rule.content)
     .join('\n\n')
-  
+
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
 }
