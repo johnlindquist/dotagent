@@ -41,7 +41,7 @@ scope: src/**
 
 Another test rule with scope.`;
     
-    writeFileSync(join(tmp, '.agent.md'), agentMd, 'utf8');
+    writeFileSync(join(tmp, '.agentconfig'), agentMd, 'utf8');
   }
 }
 
@@ -59,17 +59,17 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     const import1 = await importAll(tmp);
     let rules1 = import1.results.flatMap(r => r.rules);
 
-    // If no rules found (no example files), parse the .agent.md we created
-    if (rules1.length === 0 && existsSync(join(tmp, '.agent.md'))) {
-      const content = readFileSync(join(tmp, '.agent.md'), 'utf8');
+    // If no rules found (no example files), parse the .agentconfig we created
+    if (rules1.length === 0 && existsSync(join(tmp, '.agentconfig'))) {
+      const content = readFileSync(join(tmp, '.agentconfig'), 'utf8');
       rules1 = parseAgentMarkdown(content);
     }
 
     expect(rules1.length).toBeGreaterThan(0);
 
-    /* ---------------- 2. WRITE UNIFIED .agent.md ------------------- */
+    /* ---------------- 2. WRITE UNIFIED .agentconfig ------------------- */
     const agentMd = toAgentMarkdown(rules1);
-    const agentPath = join(tmp, '.agent-generated.md');
+    const agentPath = join(tmp, '.agentconfig-generated');
     writeFileSync(agentPath, agentMd, 'utf8');
 
     /* ---------------- 3. PARSE THE GENERATED FILE ------------------ */
@@ -146,9 +146,9 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
       }
     ];
 
-    // Write to .agent.md
+    // Write to .agentconfig
     const agentMd = toAgentMarkdown(complexRules);
-    const testPath = join(tmp, 'complex-test.agent.md');
+    const testPath = join(tmp, 'complex-test.agentconfig');
     writeFileSync(testPath, agentMd, 'utf8');
 
     // Parse back

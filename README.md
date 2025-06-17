@@ -5,7 +5,7 @@ Universal AI agent configuration parser and converter. Maintain a single source 
 ## Features
 
 - 🔄 **Import** rules from any supported IDE/tool format
-- 📝 **Convert** to a unified `.agent.md` format
+- 📝 **Convert** to a unified `.agentconfig` format
 - 🚀 **Export** back to all supported formats
 - 🛠️ **CLI tool** for easy automation
 - 📦 **TypeScript API** for programmatic use
@@ -45,20 +45,20 @@ agentconfig import .
 agentconfig import /path/to/repo
 
 # Specify output file
-agentconfig import . -o my-rules.agent.md
+agentconfig import . -o my-rules.agentconfig
 
 # Preview without making changes
 agentconfig import . --dry-run
 ```
 
-### Export `.agent.md` to all formats
+### Export `.agentconfig` to all formats
 
 ```bash
 # Export to current directory
-agentconfig export .agent.md
+agentconfig export .agentconfig
 
 # Export to specific directory
-agentconfig export .agent.md -o /path/to/repo
+agentconfig export .agentconfig -o /path/to/repo
 ```
 
 ### Convert a specific file
@@ -68,12 +68,12 @@ agentconfig export .agent.md -o /path/to/repo
 agentconfig convert .github/copilot-instructions.md
 
 # Specify format explicitly
-agentconfig convert my-rules.md -f cursor -o .agent.md
+agentconfig convert my-rules.md -f cursor -o .agentconfig
 ```
 
 ## Unified Format
 
-The `.agent.md` format uses HTML directives to embed metadata:
+The `.agentconfig` format uses HTML directives to embed metadata:
 
 ```markdown
 <!-- @meta

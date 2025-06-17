@@ -20,14 +20,14 @@ alwaysApply: true
 ## CLI Test Rule
 
 This is a test rule for CLI testing.`;
-    writeFileSync(join(d, '.agent.md'), testAgent, 'utf8');
+    writeFileSync(join(d, '.agentconfig'), testAgent, 'utf8');
   }
   
   return d;
 }
 
 describe('CLI smoke tests', () => {
-  it('import command creates a .agent.md file', async () => {
+  it('import command creates a .agentconfig file', async () => {
     const dir = setupTmp();
     try {
       const cliPath = join(dirname(__dirname), '..', 'dist', 'cli.js');
@@ -41,7 +41,7 @@ describe('CLI smoke tests', () => {
 
       expect(result.exitCode).toBe(0);
       
-      const content = readFileSync(join(dir, '.agent.md'), 'utf8');
+      const content = readFileSync(join(dir, '.agentconfig'), 'utf8');
       expect(content.length).toBeGreaterThan(20);
       expect(content).toContain('<!-- @meta');
     } finally {
@@ -54,7 +54,7 @@ describe('CLI smoke tests', () => {
     try {
       const cliPath = join(dirname(__dirname), '..', 'dist', 'cli.js');
 
-      const result = await execa('node', [cliPath, 'export', '.agent.md', '--dry-run'], {
+      const result = await execa('node', [cliPath, 'export', '.agentconfig', '--dry-run'], {
         cwd: dir,
       });
 
@@ -90,7 +90,7 @@ describe('CLI smoke tests', () => {
 
       expect(result.exitCode).toBe(0);
       
-      const outputPath = copilotPath.replace(/\.md$/, '.agent.md');
+      const outputPath = copilotPath.replace(/\.md$/, '.agentconfig');
       const content = readFileSync(outputPath, 'utf8');
       expect(content).toContain('<!-- @meta');
       expect(content).toContain('Use TypeScript everywhere');

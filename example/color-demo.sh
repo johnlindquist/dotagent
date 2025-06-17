@@ -13,13 +13,13 @@ echo ""
 # Test dry-run export
 echo "2. Dry-run export (preview mode):"
 echo "---------------------------------"
-node ../dist/cli.js export .agent.md --dry-run
+node ../dist/cli.js export .agentconfig --dry-run
 echo ""
 
 # Test actual export
 echo "3. Actual export:"
 echo "-----------------"
-node ../dist/cli.js export .agent.md
+node ../dist/cli.js export .agentconfig
 echo ""
 
 # Test import with no files

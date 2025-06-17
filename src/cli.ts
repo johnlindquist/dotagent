@@ -24,8 +24,8 @@ ${color.bold('agentconfig')} - Universal AI agent configuration tool
 
 ${color.bold('Usage:')}
   ${color.command('agentconfig import')} ${color.dim('<repo-path>')}    Import all rule files from a repository
-  ${color.command('agentconfig export')} ${color.dim('<file>')}         Export .agent.md to all supported formats
-  ${color.command('agentconfig convert')} ${color.dim('<file>')}        Convert a specific rule file to .agent.md
+  ${color.command('agentconfig export')} ${color.dim('<file>')}         Export .agentconfig to all supported formats
+  ${color.command('agentconfig convert')} ${color.dim('<file>')}        Convert a specific rule file to .agentconfig
 
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
@@ -38,11 +38,11 @@ ${color.bold('Examples:')}
   ${color.dim('# Import all rules from current directory')}
   ${color.command('agentconfig import .')}
 
-  ${color.dim('# Convert a specific file to .agent.md')}
-  ${color.command('agentconfig convert .github/copilot-instructions.md -o .agent.md')}
+  ${color.dim('# Convert a specific file to .agentconfig')}
+  ${color.command('agentconfig convert .github/copilot-instructions.md -o .agentconfig')}
 
-  ${color.dim('# Export .agent.md to all formats in current directory')}
-  ${color.command('agentconfig export .agent.md')}
+  ${color.dim('# Export .agentconfig to all formats in current directory')}
+  ${color.command('agentconfig export .agentconfig')}
 
   ${color.dim('# Preview what would be imported without creating files')}
   ${color.command('agentconfig import . --dry-run')}
@@ -106,7 +106,7 @@ async function main() {
         const allRules = results.flatMap(r => r.rules)
         const agentMd = toAgentMarkdown(allRules)
 
-        const outputPath = values.output || join(repoPath, '.agent.md')
+        const outputPath = values.output || join(repoPath, '.agentconfig')
         
         if (existsSync(outputPath) && !values.overwrite && !isDryRun) {
           console.error(color.error(`${color.path(outputPath)} already exists`))
@@ -135,14 +135,14 @@ async function main() {
 
     case 'export': {
       if (!target) {
-        console.error(color.error('.agent.md file path required'))
+        console.error(color.error('.agentconfig file path required'))
         process.exit(1)
       }
 
       const filePath = resolve(target)
       if (!existsSync(filePath)) {
         console.error(color.error(`File does not exist: ${color.path(filePath)}`))
-        console.error(color.dim('Hint: Run "agentconfig import ." first to create .agent.md'))
+        console.error(color.dim('Hint: Run "agentconfig import ." first to create .agentconfig'))
         process.exit(1)
       }
 
@@ -243,7 +243,7 @@ async function main() {
       }
 
       const agentMd = toAgentMarkdown(result.rules)
-      const outputPath = values.output || inputPath.replace(/\.[^.]+$/, '.agent.md')
+      const outputPath = values.output || inputPath.replace(/\.[^.]+$/, '.agentconfig')
 
       if (existsSync(outputPath) && !values.overwrite && !isDryRun) {
         console.error(color.error(`${color.path(outputPath)} already exists`))
