@@ -51,6 +51,7 @@
   "dependencies": {
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
+    "mdast": "^3.0.0",
     "mdast-util-to-markdown": "^2.1.2",
     "remark-parse": "^11.0.0",
     "unified": "^11.0.5"

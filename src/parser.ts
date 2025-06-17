@@ -2,7 +2,7 @@ import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import { toMarkdown } from 'mdast-util-to-markdown'
 import yaml from 'js-yaml'
-import type { Root, RootContent, Html, Heading } from 'mdast'
+import type { Root, RootContent } from 'mdast'
 import type { RuleBlock, RuleMetadata, ParserOptions } from './types.js'
 
 export function parseAgentMarkdown(
@@ -11,15 +11,15 @@ export function parseAgentMarkdown(
 ): RuleBlock[] {
   const processor = unified().use(remarkParse)
   const tree = processor.parse(markdown) as Root
-  
+
   const rules: RuleBlock[] = []
   let currentMetadata: RuleMetadata | null = null
   let currentContent: RootContent[] = []
   let currentPosition: RuleBlock['position'] | undefined
-  
+
   for (let i = 0; i < tree.children.length; i++) {
     const node = tree.children[i]
-    
+
     // Check for HTML comment with @meta directive
     if (node.type === 'html' && isMetaComment(node.value)) {
       // If we have accumulated content, save the previous rule
@@ -30,7 +30,7 @@ export function parseAgentMarkdown(
           position: currentPosition
         })
       }
-      
+
       // Parse the new metadata
       currentMetadata = parseMetaComment(node.value)
       currentContent = []
@@ -61,7 +61,7 @@ export function parseAgentMarkdown(
       }
     }
   }
-  
+
   // Don't forget the last rule
   if (currentMetadata && currentContent.length > 0) {
     rules.push({
@@ -70,7 +70,7 @@ export function parseAgentMarkdown(
       position: currentPosition
     })
   }
-  
+
   return rules
 }
 
@@ -84,9 +84,9 @@ function parseMetaComment(html: string): RuleMetadata {
   if (!match) {
     throw new Error('Invalid @meta comment format')
   }
-  
+
   const metaContent = match[1].trim()
-  
+
   // Check if it looks like YAML (has newlines or starts with a YAML indicator)
   if (metaContent.includes('\n') || metaContent.startsWith('-') || metaContent.includes(': ')) {
     // Try to parse as YAML
@@ -101,10 +101,10 @@ function parseMetaComment(html: string): RuleMetadata {
       // Fall through to key:value parsing
     }
   }
-  
+
   // Parse as key:value pairs
   const metadata: RuleMetadata = { id: `rule-${Date.now()}` }
-  
+
   // Match key:value pairs - simpler regex
   const pairs = metaContent.matchAll(/(\w+):([^\s]+)/g)
   for (const [, key, value] of pairs) {
@@ -119,7 +119,7 @@ function parseMetaComment(html: string): RuleMetadata {
       metadata[key] = trimmedValue
     }
   }
-  
+
   return metadata
 }
 
@@ -128,7 +128,7 @@ function nodesToMarkdown(nodes: RootContent[]): string {
     type: 'root',
     children: nodes
   }
-  
+
   return toMarkdown(tree, {
     bullet: '-',
     emphasis: '*',
@@ -143,15 +143,15 @@ export function parseFenceEncodedMarkdown(
 ): RuleBlock[] {
   const processor = unified().use(remarkParse)
   const tree = processor.parse(markdown) as Root
-  
+
   const rules: RuleBlock[] = []
   let currentMetadata: RuleMetadata | null = null
   let currentContent: RootContent[] = []
   let currentPosition: RuleBlock['position'] | undefined
-  
+
   for (let i = 0; i < tree.children.length; i++) {
     const node = tree.children[i]
-    
+
     // Check for code block with 'rule' language
     if (node.type === 'code' && node.lang === 'rule') {
       // Save previous rule if exists
@@ -162,7 +162,7 @@ export function parseFenceEncodedMarkdown(
           position: currentPosition
         })
       }
-      
+
       // Parse the rule metadata
       try {
         currentMetadata = yaml.load(node.value) as RuleMetadata
@@ -190,7 +190,7 @@ export function parseFenceEncodedMarkdown(
       }
     }
   }
-  
+
   // Don't forget the last rule
   if (currentMetadata && currentContent.length > 0) {
     rules.push({
@@ -199,6 +199,6 @@ export function parseFenceEncodedMarkdown(
       position: currentPosition
     })
   }
-  
+
   return rules
 }
