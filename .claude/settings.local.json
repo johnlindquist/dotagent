@@ -5,7 +5,11 @@
       "Bash(find:*)",
       "Bash(mv:*)",
       "Bash(pnpm test:*)",
-      "Bash(pnpm run:*)"
+      "Bash(pnpm run:*)",
+      "Bash(node dist/cli.js:*)",
+      "Bash(pnpm build:*)",
+      "Bash(node:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

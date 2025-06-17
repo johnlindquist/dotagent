@@ -24,7 +24,7 @@ ${color.bold('agentconfig')} - Universal AI agent configuration tool
 
 ${color.bold('Usage:')}
   ${color.command('agentconfig import')} ${color.dim('<repo-path>')}    Import all rule files from a repository
-  ${color.command('agentconfig export')} ${color.dim('<file>')}         Export .agentconfig to all supported formats
+  ${color.command('agentconfig export')} ${color.dim('[file]')}         Export .agentconfig to all supported formats
   ${color.command('agentconfig convert')} ${color.dim('<file>')}        Convert a specific rule file to .agentconfig
 
 ${color.bold('Options:')}
@@ -41,8 +41,11 @@ ${color.bold('Examples:')}
   ${color.dim('# Convert a specific file to .agentconfig')}
   ${color.command('agentconfig convert .github/copilot-instructions.md -o .agentconfig')}
 
-  ${color.dim('# Export .agentconfig to all formats in current directory')}
-  ${color.command('agentconfig export .agentconfig')}
+  ${color.dim('# Export .agentconfig to all formats (uses .agentconfig in current dir)')}
+  ${color.command('agentconfig export')}
+  
+  ${color.dim('# Export a specific file')}
+  ${color.command('agentconfig export my-rules.agentconfig')}
 
   ${color.dim('# Preview what would be imported without creating files')}
   ${color.command('agentconfig import . --dry-run')}
@@ -134,14 +137,14 @@ async function main() {
     }
 
     case 'export': {
-      if (!target) {
-        console.error(color.error('.agentconfig file path required'))
-        process.exit(1)
-      }
-
-      const filePath = resolve(target)
+      // Default to .agentconfig in current directory if no target specified
+      const filePath = target ? resolve(target) : resolve('.agentconfig')
+      
       if (!existsSync(filePath)) {
         console.error(color.error(`File does not exist: ${color.path(filePath)}`))
+        if (!target) {
+          console.error(color.dim('Hint: No .agentconfig file found in current directory'))
+        }
         console.error(color.dim('Hint: Run "agentconfig import ." first to create .agentconfig'))
         process.exit(1)
       }

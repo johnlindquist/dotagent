@@ -62,7 +62,7 @@ export function parseAgentMarkdown(
 
 function isRuleComment(html: string): boolean {
   // Check if it contains @<id> pattern (@ followed by alphanumeric and hyphens)
-  return /<!--\s*@[a-zA-Z0-9-]+/.test(html)
+  return /<!--\s*@[a-zA-Z0-9-]+(\s|$)/.test(html)
 }
 
 function parseRuleComment(html: string): RuleMetadata {
@@ -98,16 +98,38 @@ function parseRuleComment(html: string): RuleMetadata {
   }
 
   // Parse as key:value pairs
-  const pairs = metaContent.matchAll(/(\w+):([^\s]+)/g)
-  for (const [, key, value] of pairs) {
-    const trimmedValue = value.trim()
-    // Skip 'id' since we already have it from @<id>
-    if (key === 'scope' && trimmedValue.includes(',')) {
-      metadata[key] = trimmedValue.split(',').map(s => s.trim())
-    } else if (key === 'alwaysApply' || key === 'manual') {
-      metadata[key] = trimmedValue === 'true'
-    } else if (key !== 'id') {
-      metadata[key] = trimmedValue
+  // First check if it's all on one line (inline format)
+  if (!metaContent.includes('\n')) {
+    // Inline format: key:value pairs separated by spaces
+    const pairs = metaContent.matchAll(/(\w+):(\S+)(?:\s|$)/g);
+    for (const [, key, value] of pairs) {
+      // Skip 'id' since we already have it from @<id>
+      if (key === 'scope' && value.includes(',')) {
+        metadata[key] = value.split(',').map(s => s.trim())
+      } else if (key === 'alwaysApply' || key === 'manual') {
+        metadata[key] = value === 'true'
+      } else if (key !== 'id') {
+        metadata[key] = value
+      }
+    }
+  } else {
+    // Multi-line format: one key:value per line
+    const lines = metaContent.split('\n');
+    for (const line of lines) {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const key = line.substring(0, colonIndex).trim();
+        const value = line.substring(colonIndex + 1).trim();
+        
+        // Skip 'id' since we already have it from @<id>
+        if (key === 'scope' && value.includes(',')) {
+          metadata[key] = value.split(',').map(s => s.trim())
+        } else if (key === 'alwaysApply' || key === 'manual') {
+          metadata[key] = value === 'true'
+        } else if (key !== 'id' && value) {
+          metadata[key] = value
+        }
+      }
     }
   }
 
