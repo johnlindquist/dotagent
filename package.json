@@ -1,0 +1,67 @@
+{
+  "name": "agentconfig",
+  "version": "0.1.0",
+  "description": "Universal AI agent configuration parser and converter",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "bin": {
+    "agentconfig": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "configuration",
+    "copilot",
+    "cursor",
+    "cline",
+    "windsurf",
+    "zed",
+    "markdown"
+  ],
+  "author": "John Lindquist",
+  "license": "MIT",
+  "homepage": "https://github.com/johnlindquist/agentconfig#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnlindquist/agentconfig.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johnlindquist/agentconfig/issues"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "mdast-util-to-markdown": "^2.1.2",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.3",
+    "@types/tmp": "^0.2.6",
+    "execa": "^9.6.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
+  }
+}
