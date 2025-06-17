@@ -1,0 +1,7 @@
+# Cline Rules
+
+## Testing Guidelines
+
+Always write tests for new features.
+Use descriptive test names.
+Mock external dependencies.

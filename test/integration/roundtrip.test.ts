@@ -4,6 +4,7 @@ import {
   parseAgentMarkdown,
   exportAll,
 } from '../../src/index.js';
+import type { RuleBlock } from '../../src/types.js';
 
 import { tmpdir } from 'node:os';
 import { mkdtempSync, rmSync, cpSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
@@ -29,8 +30,6 @@ priority: high
 ## Test Rule
 
 This is a test rule for integration testing.
-
-<!-- @pagebreak -->
 
 <!-- @meta
 id: another-rule
@@ -74,7 +73,12 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
 
     /* ---------------- 3. PARSE THE GENERATED FILE ------------------ */
     const parsedBack = parseAgentMarkdown(readFileSync(agentPath, 'utf8'));
-    expect(parsedBack).toEqual(rules1);
+    
+    // Remove position information for comparison (it's added during parsing)
+    const normalizeRules = (rules: RuleBlock[]) => 
+      rules.map(r => ({ metadata: r.metadata, content: r.content }));
+    
+    expect(normalizeRules(parsedBack)).toEqual(normalizeRules(rules1));
 
     /* ---------------- 4. EXPORT TO ALL FORMATS --------------------- */
     const outDir = join(tmp, 'exported');

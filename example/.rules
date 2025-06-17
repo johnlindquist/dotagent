@@ -1,0 +1,7 @@
+# Zed Editor Rules
+
+## Code Style
+
+- Use 2 spaces for indentation
+- Prefer const over let
+- Always use semicolons in JavaScript/TypeScript

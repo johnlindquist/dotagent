@@ -10,23 +10,30 @@ export function toAgentMarkdown(rules: RuleBlock[]): string {
   for (const rule of rules) {
     const { metadata, content } = rule
     
-    // Build metadata comment
-    const metaLines: string[] = []
+    // Extract id and other metadata
+    const { id, ...otherMetadata } = metadata
     
-    // Format metadata as YAML
-    const metaYaml = yaml.dump(metadata, {
-      flowLevel: 1,
-      lineWidth: -1
-    }).trim()
+    // Build the comment starting with @<id>
+    let metaComment = `<!-- @${id}`
     
-    // Create the HTML comment
-    const metaComment = `<!-- @meta\n${metaYaml}\n-->`
+    // If there are other metadata properties, add them
+    if (Object.keys(otherMetadata).length > 0) {
+      // Format remaining metadata as YAML
+      const metaYaml = yaml.dump(otherMetadata, {
+        flowLevel: 1,
+        lineWidth: -1
+      }).trim()
+      
+      metaComment += `\n${metaYaml}`
+    }
+    
+    metaComment += ' -->'
     
     // Add section
     sections.push(`${metaComment}\n\n${content}`)
   }
   
-  return sections.join('\n\n<!-- @pagebreak -->\n\n')
+  return sections.join('\n\n')
 }
 
 export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {

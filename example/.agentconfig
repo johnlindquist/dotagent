@@ -1,5 +1,4 @@
-<!-- @meta
-id: core-style
+<!-- @core-style
 alwaysApply: true
 priority: high
 description: Core coding standards
@@ -12,10 +11,8 @@ description: Core coding standards
 3. All async functions must have error handling
 4. Follow semantic versioning for all packages
 
-<!-- @pagebreak -->
 
-<!-- @meta
-id: api-safety
+<!-- @api-safety
 scope: src/api/**
 priority: high
 description: API security rules
@@ -28,10 +25,8 @@ description: API security rules
 - Implement rate limiting on all public endpoints
 - Use JWT tokens with short expiration times
 
-<!-- @pagebreak -->
 
-<!-- @meta
-id: testing-standards
+<!-- @testing-standards
 alwaysApply: true
 priority: medium
 -->

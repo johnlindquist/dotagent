@@ -20,8 +20,8 @@ export function parseAgentMarkdown(
   for (let i = 0; i < tree.children.length; i++) {
     const node = tree.children[i]
 
-    // Check for HTML comment with @meta directive
-    if (node.type === 'html' && isMetaComment(node.value)) {
+    // Check for HTML comment with @<id> directive
+    if (node.type === 'html' && isRuleComment(node.value)) {
       // If we have accumulated content, save the previous rule
       if (currentMetadata && currentContent.length > 0) {
         rules.push({
@@ -32,26 +32,12 @@ export function parseAgentMarkdown(
       }
 
       // Parse the new metadata
-      currentMetadata = parseMetaComment(node.value)
+      currentMetadata = parseRuleComment(node.value)
       currentContent = []
       currentPosition = node.position ? {
         start: { ...node.position.start },
         end: { ...node.position.end }
       } : undefined
-    }
-    // Check for @pagebreak directive
-    else if (node.type === 'html' && node.value.includes('@pagebreak')) {
-      // Save current rule if exists
-      if (currentMetadata && currentContent.length > 0) {
-        rules.push({
-          metadata: currentMetadata,
-          content: nodesToMarkdown(currentContent),
-          position: currentPosition
-        })
-      }
-      currentMetadata = null
-      currentContent = []
-      currentPosition = undefined
     }
     // Accumulate content
     else if (currentMetadata) {
@@ -74,48 +60,53 @@ export function parseAgentMarkdown(
   return rules
 }
 
-function isMetaComment(html: string): boolean {
-  return html.includes('@meta')
+function isRuleComment(html: string): boolean {
+  // Check if it contains @<id> pattern (@ followed by alphanumeric and hyphens)
+  return /<!--\s*@[a-zA-Z0-9-]+/.test(html)
 }
 
-function parseMetaComment(html: string): RuleMetadata {
-  // Extract content between <!-- @meta and -->
-  const match = html.match(/<!--\s*@meta\s+([\s\S]*?)\s*-->/)
+function parseRuleComment(html: string): RuleMetadata {
+  // Extract @<id> and any additional metadata
+  const match = html.match(/<!--\s*@([a-zA-Z0-9-]+)\s*([\s\S]*?)\s*-->/)
   if (!match) {
-    throw new Error('Invalid @meta comment format')
+    throw new Error('Invalid rule comment format')
   }
 
-  const metaContent = match[1].trim()
+  const id = match[1]
+  const metaContent = match[2].trim()
+
+  // Start with the ID from the @<id> pattern
+  const metadata: RuleMetadata = { id }
+
+  // If there's no additional content, return just the ID
+  if (!metaContent) {
+    return metadata
+  }
 
   // Check if it looks like YAML (has newlines or starts with a YAML indicator)
   if (metaContent.includes('\n') || metaContent.startsWith('-') || metaContent.includes(': ')) {
     // Try to parse as YAML
     try {
       const parsed = yaml.load(metaContent) as Record<string, unknown>
-      if (!parsed.id && typeof parsed === 'object' && parsed !== null) {
-        // Generate ID from first key or random
-        parsed.id = Object.keys(parsed)[0] || `rule-${Date.now()}`
+      if (typeof parsed === 'object' && parsed !== null) {
+        // Merge with existing metadata, but preserve the ID from @<id>
+        return { ...parsed, id } as RuleMetadata
       }
-      return parsed as RuleMetadata
     } catch {
       // Fall through to key:value parsing
     }
   }
 
   // Parse as key:value pairs
-  const metadata: RuleMetadata = { id: `rule-${Date.now()}` }
-
-  // Match key:value pairs - simpler regex
   const pairs = metaContent.matchAll(/(\w+):([^\s]+)/g)
   for (const [, key, value] of pairs) {
     const trimmedValue = value.trim()
-    if (key === 'id') {
-      metadata.id = trimmedValue
-    } else if (key === 'scope' && trimmedValue.includes(',')) {
+    // Skip 'id' since we already have it from @<id>
+    if (key === 'scope' && trimmedValue.includes(',')) {
       metadata[key] = trimmedValue.split(',').map(s => s.trim())
     } else if (key === 'alwaysApply' || key === 'manual') {
       metadata[key] = trimmedValue === 'true'
-    } else {
+    } else if (key !== 'id') {
       metadata[key] = trimmedValue
     }
   }

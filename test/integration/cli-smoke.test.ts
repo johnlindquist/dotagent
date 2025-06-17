@@ -12,8 +12,7 @@ function setupTmp(): string {
     cpSync(example, d, { recursive: true });
   } else {
     // Create minimal test data
-    const testAgent = `<!-- @meta
-id: cli-test
+    const testAgent = `<!-- @cli-test
 alwaysApply: true
 -->
 
@@ -43,7 +42,7 @@ describe('CLI smoke tests', () => {
       
       const content = readFileSync(join(dir, '.agentconfig'), 'utf8');
       expect(content.length).toBeGreaterThan(20);
-      expect(content).toContain('<!-- @meta');
+      expect(content).toContain('<!-- @');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -53,6 +52,21 @@ describe('CLI smoke tests', () => {
     const dir = setupTmp();
     try {
       const cliPath = join(dirname(__dirname), '..', 'dist', 'cli.js');
+
+      // Remove any existing rule files that may have been copied from example
+      const rulesToRemove = ['.github/copilot-instructions.md', '.rules', '.clinerules', '.windsurfrules', 'AGENTS.md', 'CONVENTIONS.md'];
+      for (const rule of rulesToRemove) {
+        const fullPath = join(dir, rule);
+        if (existsSync(fullPath)) {
+          rmSync(fullPath, { force: true });
+        }
+      }
+      
+      // Remove .github directory if empty
+      const githubDir = join(dir, '.github');
+      if (existsSync(githubDir)) {
+        rmSync(githubDir, { recursive: true, force: true });
+      }
 
       const result = await execa('node', [cliPath, 'export', '.agentconfig', '--dry-run'], {
         cwd: dir,
@@ -92,7 +106,7 @@ describe('CLI smoke tests', () => {
       
       const outputPath = copilotPath.replace(/\.md$/, '.agentconfig');
       const content = readFileSync(outputPath, 'utf8');
-      expect(content).toContain('<!-- @meta');
+      expect(content).toContain('<!-- @');
       expect(content).toContain('Use TypeScript everywhere');
     } finally {
       rmSync(dir, { recursive: true, force: true });

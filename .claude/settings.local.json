@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find:*)",
+      "Bash(mv:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm run:*)"
     ],
     "deny": []
   }

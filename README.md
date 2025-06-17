@@ -73,11 +73,10 @@ agentconfig convert my-rules.md -f cursor -o .agentconfig
 
 ## Unified Format
 
-The `.agentconfig` format uses HTML directives to embed metadata:
+The `.agentconfig` format uses HTML directives with `@<id>` to define rules:
 
 ```markdown
-<!-- @meta
-id: core-style
+<!-- @core-style
 alwaysApply: true
 priority: high
 -->
@@ -88,10 +87,7 @@ priority: high
 2. JavaScript: double quotes, tabs for indentation
 3. All async functions must handle errors
 
-<!-- @pagebreak -->
-
-<!-- @meta
-id: api-safety
+<!-- @api-safety
 scope: src/api/**
 manual: true
 -->

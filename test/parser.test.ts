@@ -4,8 +4,7 @@ import { parseAgentMarkdown } from '../src/parser.js'
 describe('parseAgentMarkdown', () => {
   it('should parse HTML-directive markdown with single rule', () => {
     const markdown = `
-<!-- @meta
-id: test-rule
+<!-- @test-rule
 alwaysApply: true
 -->
 
@@ -23,19 +22,15 @@ This is a test rule content.
     expect(rules[0].content).toContain('This is a test rule content.')
   })
 
-  it('should parse multiple rules separated by pagebreak', () => {
+  it('should parse multiple rules with @<id> as implicit separator', () => {
     const markdown = `
-<!-- @meta
-id: rule1
+<!-- @rule1
 priority: high
 -->
 
 First rule content
 
-<!-- @pagebreak -->
-
-<!-- @meta
-id: rule2
+<!-- @rule2
 priority: low
 -->
 
@@ -53,7 +48,7 @@ Second rule content
 
   it('should parse inline key:value metadata', () => {
     const markdown = `
-<!-- @meta id:inline-rule scope:src/api/** manual:true -->
+<!-- @inline-rule scope:src/api/** manual:true -->
 
 Inline metadata rule
 `
@@ -70,7 +65,7 @@ Inline metadata rule
     const markdown = `
 # Just some content
 
-Without any @meta directives
+Without any @<id> directives
 `
 
     const rules = parseAgentMarkdown(markdown)
