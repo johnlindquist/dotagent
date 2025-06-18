@@ -116,6 +116,7 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     /* ---------------- 7. VERIFY ALL FORMATS EXPORTED ---------------- */
     const formats = import2.results.map(r => r.format).sort();
     expect(formats).toContain('agent');
+    expect(formats).toContain('claude');
     expect(formats).toContain('copilot');
     expect(formats).toContain('cursor');
     expect(formats).toContain('cline');

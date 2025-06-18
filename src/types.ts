@@ -20,7 +20,7 @@ export interface RuleBlock {
 }
 
 export interface ImportResult {
-  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'unknown'
+  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'unknown'
   filePath: string
   rules: RuleBlock[]
   raw?: string
@@ -32,7 +32,7 @@ export interface ImportResults {
 }
 
 export interface ExportOptions {
-  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider'
+  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude'
   outputPath?: string
   overwrite?: boolean
 }

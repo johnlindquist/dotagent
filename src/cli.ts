@@ -30,7 +30,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
 
@@ -93,7 +93,8 @@ async function main() {
           '.clinerules',
           '.windsurfrules',
           '.rules',
-          'AGENTS.md'
+          'AGENTS.md',
+          'CLAUDE.md'
         ]))
       } else {
         console.log(color.success(`Found ${color.number(results.length.toString())} rule file(s):`))
@@ -166,7 +167,8 @@ async function main() {
         { path: '.windsurfrules', format: 'Windsurf' },
         { path: '.rules', format: 'Zed' },
         { path: 'AGENTS.md', format: 'OpenAI Codex' },
-        { path: 'CONVENTIONS.md', format: 'Aider' }
+        { path: 'CONVENTIONS.md', format: 'Aider' },
+        { path: 'CLAUDE.md', format: 'Claude Code' }
       ]
 
       if (isDryRun) {
@@ -207,9 +209,11 @@ async function main() {
         else if (inputPath.includes('.windsurfrules')) format = 'windsurf'
         else if (inputPath.endsWith('.rules')) format = 'zed'
         else if (inputPath.endsWith('AGENTS.md')) format = 'codex'
+        else if (inputPath.endsWith('CLAUDE.md')) format = 'claude'
+        else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude)'))
           process.exit(1)
         }
       }
@@ -218,7 +222,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -238,8 +242,13 @@ async function main() {
           result = importZed(inputPath)
           break
         case 'codex':
-        case 'aider':
           result = importCodex(inputPath)
+          break
+        case 'aider':
+          result = importAider(inputPath)
+          break
+        case 'claude':
+          result = importClaudeCode(inputPath)
           break
         default:
           console.error(color.error(`Unknown format: ${format}`))

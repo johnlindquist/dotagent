@@ -88,11 +88,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
-  // Check for CLAUDE.md (similar to AGENTS.md)
+  // Check for CLAUDE.md (Claude Code)
   const claudeMd = join(repoPath, 'CLAUDE.md')
   if (existsSync(claudeMd)) {
     try {
-      results.push(importCodex(claudeMd))
+      results.push(importClaudeCode(claudeMd))
     } catch (e) {
       errors.push({ file: claudeMd, error: String(e) })
     }
@@ -329,6 +329,25 @@ export function importAider(filePath: string): ImportResult {
   
   return {
     format: 'aider',
+    filePath,
+    rules,
+    raw: content
+  }
+}
+
+export function importClaudeCode(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const rules: RuleBlock[] = [{
+    metadata: {
+      id: 'claude-code-instructions',
+      alwaysApply: true,
+      description: 'Claude Code context and instructions'
+    },
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'claude',
     filePath,
     rules,
     raw: content

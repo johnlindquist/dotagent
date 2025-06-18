@@ -13,7 +13,8 @@ export {
   importWindsurf,
   importZed,
   importCodex,
-  importAider
+  importAider,
+  importClaudeCode
 } from './importers.js'
 
 export {
@@ -26,6 +27,7 @@ export {
   exportToZed,
   exportToCodex,
   exportToAider,
+  exportToClaudeCode,
   exportAll
 } from './exporters.js'
 

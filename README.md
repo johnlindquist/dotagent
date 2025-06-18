@@ -1,6 +1,6 @@
 # dotagent
 
-Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across VS Code Copilot, Cursor, Cline, Windsurf, Zed, OpenAI Codex, and more.
+Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, and more.
 
 ## Features
 
@@ -19,6 +19,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Tool/IDE | Rule File | Format |
 |----------|-----------|---------|
 | Agent (dotagent) | `.agent/**/*.md` | Markdown with YAML frontmatter |
+| Claude Code | `CLAUDE.md` | Plain Markdown |
 | VS Code (Copilot) | `.github/copilot-instructions.md` | Plain Markdown |
 | Cursor | `.cursor/rules/*.mdc` | Markdown with YAML frontmatter |
 | Cline | `.clinerules` or `.clinerules/*.md` | Plain Markdown |
