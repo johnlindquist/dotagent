@@ -9,7 +9,9 @@
       "Bash(node dist/cli.js:*)",
       "Bash(pnpm build:*)",
       "Bash(node:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }

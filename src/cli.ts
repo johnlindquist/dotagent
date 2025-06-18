@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { parseArgs } from 'util'
-import { importAll, toAgentMarkdown, exportAll, parseAgentMarkdown } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 
 const { values, positionals } = parseArgs({
@@ -20,12 +20,12 @@ const { values, positionals } = parseArgs({
 
 function showHelp() {
   console.log(`
-${color.bold('agentconfig')} - Universal AI agent configuration tool
+${color.bold('dotagent')} - Multi-file AI agent configuration manager
 
 ${color.bold('Usage:')}
-  ${color.command('agentconfig import')} ${color.dim('<repo-path>')}    Import all rule files from a repository
-  ${color.command('agentconfig export')} ${color.dim('[file]')}         Export .agentconfig to all supported formats
-  ${color.command('agentconfig convert')} ${color.dim('<file>')}        Convert a specific rule file to .agentconfig
+  ${color.command('dotagent import')} ${color.dim('<repo-path>')}    Import all rule files from a repository
+  ${color.command('dotagent export')} ${color.dim('[repo-path]')}   Export .agent/ directory to all supported formats
+  ${color.command('dotagent convert')} ${color.dim('<file>')}        Convert a specific rule file
 
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
@@ -35,20 +35,17 @@ ${color.bold('Options:')}
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
 
 ${color.bold('Examples:')}
-  ${color.dim('# Import all rules from current directory')}
-  ${color.command('agentconfig import .')}
+  ${color.dim('# Import all rules from current directory (creates .agent/)')}
+  ${color.command('dotagent import .')}
 
-  ${color.dim('# Convert a specific file to .agentconfig')}
-  ${color.command('agentconfig convert .github/copilot-instructions.md -o .agentconfig')}
-
-  ${color.dim('# Export .agentconfig to all formats (uses .agentconfig in current dir)')}
-  ${color.command('agentconfig export')}
+  ${color.dim('# Export .agent/ directory to all formats')}
+  ${color.command('dotagent export')}
   
-  ${color.dim('# Export a specific file')}
-  ${color.command('agentconfig export my-rules.agentconfig')}
+  ${color.dim('# Export from specific directory')}
+  ${color.command('dotagent export /path/to/repo')}
 
   ${color.dim('# Preview what would be imported without creating files')}
-  ${color.command('agentconfig import . --dry-run')}
+  ${color.command('dotagent import . --dry-run')}
 `)
 }
 
@@ -88,8 +85,9 @@ async function main() {
 
       if (results.length === 0) {
         console.log(color.warning('No rule files found'))
-        console.log(color.dim('Hint: AgentConfig looks for:'))
+        console.log(color.dim('Hint: DotAgent looks for:'))
         console.log(formatList([
+          '.agent/**/*.md',
           '.github/copilot-instructions.md',
           '.cursor/rules/*.mdc',
           '.clinerules',
@@ -107,23 +105,20 @@ async function main() {
 
         // Combine all rules
         const allRules = results.flatMap(r => r.rules)
-        const agentMd = toAgentMarkdown(allRules)
-
-        const outputPath = values.output || join(repoPath, '.agentconfig')
         
-        if (existsSync(outputPath) && !values.overwrite && !isDryRun) {
-          console.error(color.error(`${color.path(outputPath)} already exists`))
-          console.error(color.dim('Hint: Use -w to overwrite or -o to specify a different output file'))
-          process.exit(1)
+        // Check if .agent directory exists
+        const agentDir = join(repoPath, '.agent')
+        if (existsSync(agentDir)) {
+          const existingAgent = importAgent(agentDir)
+          console.log(color.info(`Found existing .agent/ directory with ${color.number(existingAgent.rules.length.toString())} rule(s)`))
         }
 
         if (isDryRun) {
-          console.log(color.info(`Would create: ${color.path(outputPath)}`))
-          console.log(color.dim(`File size: ~${Math.round(agentMd.length / 1024)}KB`))
+          console.log(color.info(`Would export to: ${color.path(agentDir)}`))
           console.log(color.dim(`Total rules: ${allRules.length}`))
         } else {
-          writeFileSync(outputPath, agentMd, 'utf-8')
-          console.log(color.success(`Created unified configuration: ${color.path(outputPath)}`))
+          exportToAgent(allRules, repoPath)
+          console.log(color.success(`Created .agent/ directory with ${color.number(allRules.length.toString())} rule(s)`))
         }
       }
 
@@ -137,26 +132,32 @@ async function main() {
     }
 
     case 'export': {
-      // Default to .agentconfig in current directory if no target specified
-      const filePath = target ? resolve(target) : resolve('.agentconfig')
+      // Default to current directory if no target specified
+      const repoPath = target ? resolve(target) : process.cwd()
+      const agentDir = join(repoPath, '.agent')
       
-      if (!existsSync(filePath)) {
-        console.error(color.error(`File does not exist: ${color.path(filePath)}`))
-        if (!target) {
-          console.error(color.dim('Hint: No .agentconfig file found in current directory'))
-        }
-        console.error(color.dim('Hint: Run "agentconfig import ." first to create .agentconfig'))
+      if (!existsSync(agentDir)) {
+        console.error(color.error(`No .agent/ directory found in: ${color.path(repoPath)}`))
+        console.error(color.dim('Hint: Run "dotagent import ." first to create .agent/ directory'))
+        process.exit(1)
+      }
+
+      // Check for legacy .agentconfig file
+      const agentConfigPath = join(repoPath, '.agentconfig')
+      if (existsSync(agentConfigPath)) {
+        console.error(color.error('Found deprecated .agentconfig file'))
+        console.error(color.dim('The single-file .agentconfig format is deprecated. Please run "dotagent import ." to migrate to .agent/ directory.'))
         process.exit(1)
       }
 
       console.log(header('Exporting Rules'))
       
-      const content = readFileSync(filePath, 'utf-8')
-      const rules = parseAgentMarkdown(content)
+      const result = importAgent(agentDir)
+      const rules = result.rules
       
-      console.log(color.success(`Parsed ${color.number(rules.length.toString())} rule(s) from ${color.path(filePath)}`))
+      console.log(color.success(`Found ${color.number(rules.length.toString())} rule(s) in ${color.path(agentDir)}`))
 
-      const outputDir = values.output || process.cwd()
+      const outputDir = values.output || repoPath
       
       const exportTargets = [
         { path: '.github/copilot-instructions.md', format: 'VS Code Copilot' },
@@ -245,22 +246,16 @@ async function main() {
           process.exit(1)
       }
 
-      const agentMd = toAgentMarkdown(result.rules)
-      const outputPath = values.output || inputPath.replace(/\.[^.]+$/, '.agentconfig')
-
-      if (existsSync(outputPath) && !values.overwrite && !isDryRun) {
-        console.error(color.error(`${color.path(outputPath)} already exists`))
-        console.error(color.dim('Hint: Use -w to overwrite'))
-        process.exit(1)
-      }
+      const outputDir = values.output || process.cwd()
+      const agentDir = join(outputDir, '.agent')
 
       if (isDryRun) {
-        console.log(color.info(`Would create: ${color.path(outputPath)}`))
+        console.log(color.info(`Would export to: ${color.path(agentDir)}`))
         console.log(color.dim(`Rules found: ${result.rules.length}`))
-        console.log(color.dim(`Output size: ~${Math.round(agentMd.length / 1024)}KB`))
       } else {
-        writeFileSync(outputPath, agentMd, 'utf-8')
-        console.log(color.success(`Created: ${color.path(outputPath)}`))
+        exportToAgent(result.rules, outputDir)
+        console.log(color.success(`Exported to: ${color.path(agentDir)}`))
+        console.log(color.dim(`Created ${result.rules.length} .mdc file(s)`))
       }
       break
     }

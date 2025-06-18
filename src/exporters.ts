@@ -4,7 +4,12 @@ import yaml from 'js-yaml'
 import matter from 'gray-matter'
 import type { RuleBlock, ExportOptions } from './types.js'
 
+/**
+ * @deprecated Use exportToAgent() instead. Single-file .agentconfig format is deprecated.
+ */
 export function toAgentMarkdown(rules: RuleBlock[]): string {
+  console.warn('Warning: toAgentMarkdown() is deprecated. Use exportToAgent() to export to .agent/ directory instead.')
+  
   const sections: string[] = []
 
   for (const rule of rules) {
@@ -46,6 +51,53 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
+export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
+  const agentDir = join(outputDir, '.agent')
+  mkdirSync(agentDir, { recursive: true })
+
+  for (const rule of rules) {
+    // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
+    let filename: string
+    let filePath: string
+    
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      // Create nested structure based on ID
+      const parts = rule.metadata.id.split('/')
+      const fileName = parts.pop() + '.md'
+      const subDir = join(agentDir, ...parts)
+      mkdirSync(subDir, { recursive: true })
+      filePath = join(subDir, fileName)
+    } else {
+      filename = `${rule.metadata.id || 'rule'}.md`
+      filePath = join(agentDir, filename)
+    }
+
+    // Prepare front matter data - filter out undefined values
+    const frontMatterBase: Record<string, unknown> = {}
+
+    if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
+    if (rule.metadata.globs !== undefined) frontMatterBase.globs = rule.metadata.globs
+    if (rule.metadata.manual !== undefined) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.scope !== undefined) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
+
+    // Add other metadata fields
+    for (const [key, value] of Object.entries(rule.metadata)) {
+      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
+        frontMatterBase[key] = value
+      }
+    }
+
+    const frontMatter = frontMatterBase
+
+    // Create Markdown content with frontmatter
+    const mdContent = matter.stringify(rule.content, frontMatter)
+    writeFileSync(filePath, mdContent, 'utf-8')
+  }
+}
+
 export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
   const rulesDir = join(outputDir, '.cursor', 'rules')
   mkdirSync(rulesDir, { recursive: true })
@@ -61,10 +113,13 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
     if (rule.metadata.globs !== undefined) frontMatterBase.globs = rule.metadata.globs
     if (rule.metadata.manual !== undefined) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.scope !== undefined) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
 
     // Add other metadata fields
     for (const [key, value] of Object.entries(rule.metadata)) {
-      if (!['id', 'description', 'alwaysApply', 'globs', 'manual'].includes(key) && value !== undefined) {
+      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
         frontMatterBase[key] = value
       }
     }
@@ -144,6 +199,7 @@ export function exportToAider(rules: RuleBlock[], outputPath: string): void {
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false): void {
   // Export to all supported formats
   if (!dryRun) {
+    exportToAgent(rules, repoPath)
     exportToCopilot(rules, join(repoPath, '.github', 'copilot-instructions.md'))
     exportToCursor(rules, repoPath)
     exportToCline(rules, join(repoPath, '.clinerules'))

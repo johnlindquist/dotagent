@@ -1,12 +1,13 @@
-# agentconfig
+# dotagent
 
-Universal AI agent configuration parser and converter. Maintain a single source of truth for AI coding assistant rules across VS Code Copilot, Cursor, Cline, Windsurf, Zed, OpenAI Codex, and more.
+Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across VS Code Copilot, Cursor, Cline, Windsurf, Zed, OpenAI Codex, and more.
 
 ## Features
 
 - 🔄 **Import** rules from any supported IDE/tool format
-- 📝 **Convert** to a unified `.agentconfig` format
+- 📝 **Convert** to a unified `.agent/` directory structure
 - 🚀 **Export** back to all supported formats
+- 📁 **Nested folders** support for better organization
 - 🛠️ **CLI tool** for easy automation
 - 📦 **TypeScript API** for programmatic use
 - 🎨 **Color-coded output** for better readability
@@ -17,6 +18,7 @@ Universal AI agent configuration parser and converter. Maintain a single source 
 
 | Tool/IDE | Rule File | Format |
 |----------|-----------|---------|
+| Agent (dotagent) | `.agent/**/*.md` | Markdown with YAML frontmatter |
 | VS Code (Copilot) | `.github/copilot-instructions.md` | Plain Markdown |
 | Cursor | `.cursor/rules/*.mdc` | Markdown with YAML frontmatter |
 | Cline | `.clinerules` or `.clinerules/*.md` | Plain Markdown |
@@ -28,9 +30,9 @@ Universal AI agent configuration parser and converter. Maintain a single source 
 ## Installation
 
 ```bash
-npm install -g agentconfig
+npm install -g dotagent
 # or
-pnpm add -g agentconfig
+pnpm add -g dotagent
 ```
 
 ## CLI Usage
@@ -38,27 +40,24 @@ pnpm add -g agentconfig
 ### Import all rules from a repository
 
 ```bash
-# Import from current directory
+# Import from current directory (creates .agent/ directory)
 agentconfig import .
 
 # Import from specific path
 agentconfig import /path/to/repo
 
-# Specify output file
-agentconfig import . -o my-rules.agentconfig
-
 # Preview without making changes
 agentconfig import . --dry-run
 ```
 
-### Export `.agentconfig` to all formats
+### Export `.agent/` directory to all formats
 
 ```bash
-# Export to current directory
-agentconfig export .agentconfig
+# Export from current directory's .agent/
+agentconfig export .
 
 # Export to specific directory
-agentconfig export .agentconfig -o /path/to/repo
+agentconfig export . -o /path/to/repo
 ```
 
 ### Convert a specific file
@@ -68,29 +67,37 @@ agentconfig export .agentconfig -o /path/to/repo
 agentconfig convert .github/copilot-instructions.md
 
 # Specify format explicitly
-agentconfig convert my-rules.md -f cursor -o .agentconfig
+agentconfig convert my-rules.md -f cursor
 ```
 
 ## Unified Format
 
-The `.agentconfig` format uses HTML directives with `@<id>` to define rules:
+The `.agent/` directory contains `.md` files (Markdown with YAML frontmatter) to organize rules, supporting nested folders:
 
 ```markdown
-<!-- @core-style
+---
+id: core-style
+title: Core Style Guidelines
 alwaysApply: true
 priority: high
--->
+---
 
 ## Core Style Guidelines
 
 1. Use **Bazel** for Java builds
 2. JavaScript: double quotes, tabs for indentation
 3. All async functions must handle errors
+```
 
-<!-- @api-safety
+And another file `.agent/api-safety.md`:
+
+```markdown
+---
+id: api-safety
+title: API Safety Rules
 scope: src/api/**
 manual: true
--->
+---
 
 ## API Safety Rules
 
@@ -99,24 +106,40 @@ manual: true
 - Rate limit all endpoints
 ```
 
+Nested folders are supported - for example `.agent/frontend/components.md`:
+
+```markdown
+---
+id: frontend/components
+title: Component Guidelines
+scope: src/components/**
+---
+
+## Component Guidelines
+
+- Use functional components with hooks
+- Follow atomic design principles
+- Include unit tests for all components
+```
+
 ## Programmatic Usage
 
 ```typescript
 import { 
   importAll, 
-  parseAgentMarkdown, 
-  toAgentMarkdown,
+  importAgent,
+  exportToAgent,
   exportAll 
-} from 'agentconfig'
+} from 'dotagent'
 
 // Import all rules from a repository
 const { results, errors } = await importAll('/path/to/repo')
 
-// Parse agent markdown
-const rules = parseAgentMarkdown(agentMarkdownContent)
+// Import from .agent directory
+const { rules } = await importAgent('/path/to/repo/.agent')
 
-// Convert rules to agent markdown
-const markdown = toAgentMarkdown(rules)
+// Export to .agent directory
+await exportToAgent(rules, '/path/to/repo')
 
 // Export to all formats
 exportAll(rules, '/path/to/repo')

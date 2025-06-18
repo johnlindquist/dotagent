@@ -11,22 +11,26 @@ function setupTmp(): string {
   if (existsSync(example)) {
     cpSync(example, d, { recursive: true });
   } else {
-    // Create minimal test data
-    const testAgent = `<!-- @cli-test
+    // Create minimal test data in .agent directory
+    const agentDir = join(d, '.agent');
+    const { mkdirSync } = require('fs');
+    mkdirSync(agentDir, { recursive: true });
+    const testAgent = `---
+id: cli-test
 alwaysApply: true
--->
+---
 
 ## CLI Test Rule
 
 This is a test rule for CLI testing.`;
-    writeFileSync(join(d, '.agentconfig'), testAgent, 'utf8');
+    writeFileSync(join(agentDir, 'cli-test.md'), testAgent, 'utf8');
   }
   
   return d;
 }
 
 describe('CLI smoke tests', () => {
-  it('import command creates a .agentconfig file', async () => {
+  it('import command creates a .agent/ directory', async () => {
     const dir = setupTmp();
     try {
       const cliPath = join(dirname(__dirname), '..', 'dist', 'cli.js');
@@ -40,9 +44,11 @@ describe('CLI smoke tests', () => {
 
       expect(result.exitCode).toBe(0);
       
-      const content = readFileSync(join(dir, '.agentconfig'), 'utf8');
-      expect(content.length).toBeGreaterThan(20);
-      expect(content).toContain('<!-- @');
+      const agentDir = join(dir, '.agent');
+      expect(existsSync(agentDir)).toBe(true);
+      
+      const files = require('fs').readdirSync(agentDir).filter(f => f.endsWith('.md'));
+      expect(files.length).toBeGreaterThan(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -53,6 +59,18 @@ describe('CLI smoke tests', () => {
     try {
       const cliPath = join(dirname(__dirname), '..', 'dist', 'cli.js');
 
+      // Remove legacy .agentconfig if it exists
+      const agentConfigPath = join(dir, '.agentconfig');
+      if (existsSync(agentConfigPath)) {
+        rmSync(agentConfigPath, { force: true });
+      }
+      
+      // Create .agent directory with a test rule
+      const agentDir = join(dir, '.agent');
+      const { mkdirSync } = require('fs');
+      mkdirSync(agentDir, { recursive: true });
+      writeFileSync(join(agentDir, 'test-rule.md'), '---\nid: test-rule\n---\n\n# Test Rule', 'utf8');
+      
       // Remove any existing rule files that may have been copied from example
       const rulesToRemove = ['.github/copilot-instructions.md', '.rules', '.clinerules', '.windsurfrules', 'AGENTS.md', 'CONVENTIONS.md'];
       for (const rule of rulesToRemove) {
@@ -68,7 +86,7 @@ describe('CLI smoke tests', () => {
         rmSync(githubDir, { recursive: true, force: true });
       }
 
-      const result = await execa('node', [cliPath, 'export', '.agentconfig', '--dry-run'], {
+      const result = await execa('node', [cliPath, 'export', dir, '--dry-run'], {
         cwd: dir,
       });
 
@@ -104,9 +122,13 @@ describe('CLI smoke tests', () => {
 
       expect(result.exitCode).toBe(0);
       
-      const outputPath = copilotPath.replace(/\.md$/, '.agentconfig');
-      const content = readFileSync(outputPath, 'utf8');
-      expect(content).toContain('<!-- @');
+      const agentDir = join(dir, '.agent');
+      expect(existsSync(agentDir)).toBe(true);
+      
+      const files = require('fs').readdirSync(agentDir).filter(f => f.endsWith('.md'));
+      expect(files.length).toBeGreaterThan(0);
+      
+      const content = readFileSync(join(agentDir, files[0]), 'utf8');
       expect(content).toContain('Use TypeScript everywhere');
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -137,7 +159,7 @@ describe('CLI smoke tests', () => {
     const result = await execa('node', [cliPath, '--help'], {});
 
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain('agentconfig');
+    expect(result.stdout).toContain('dotagent');
     expect(result.stdout).toContain('Usage:');
     expect(result.stdout).toContain('Options:');
     expect(result.stdout).toContain('Examples:');

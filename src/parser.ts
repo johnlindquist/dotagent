@@ -5,10 +5,14 @@ import yaml from 'js-yaml'
 import type { Root, RootContent } from 'mdast'
 import type { RuleBlock, RuleMetadata, ParserOptions } from './types.js'
 
+/**
+ * @deprecated Use importAgent() instead. Single-file .agentconfig format is deprecated.
+ */
 export function parseAgentMarkdown(
   markdown: string,
   options: ParserOptions = {}
 ): RuleBlock[] {
+  console.warn('Warning: parseAgentMarkdown() is deprecated. Use importAgent() to import from .agent/ directory instead.')
   const processor = unified().use(remarkParse)
   const tree = processor.parse(markdown) as Root
 

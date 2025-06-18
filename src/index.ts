@@ -5,6 +5,7 @@ export {
 
 export {
   importAll,
+  importAgent,
   importCopilot,
   importCursor,
   importCursorLegacy,
@@ -17,6 +18,7 @@ export {
 
 export {
   toAgentMarkdown,
+  exportToAgent,
   exportToCopilot,
   exportToCursor,
   exportToCline,

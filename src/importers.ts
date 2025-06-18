@@ -8,6 +8,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const results: ImportResult[] = []
   const errors: Array<{ file: string; error: string }> = []
   
+  // Check for Agent directory (.agent/)
+  const agentDir = join(repoPath, '.agent')
+  if (existsSync(agentDir)) {
+    try {
+      results.push(importAgent(agentDir))
+    } catch (e) {
+      errors.push({ file: agentDir, error: String(e) })
+    }
+  }
+  
   // Check for VS Code Copilot instructions
   const copilotPath = join(repoPath, '.github', 'copilot-instructions.md')
   if (existsSync(copilotPath)) {
@@ -107,6 +117,52 @@ export function importCopilot(filePath: string): ImportResult {
     filePath,
     rules,
     raw: content
+  }
+}
+
+export function importAgent(agentDir: string): ImportResult {
+  const rules: RuleBlock[] = []
+  
+  // Recursively find all .md files in the agent directory
+  function findMarkdownFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
+    
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+      
+      if (entry.isDirectory()) {
+        // Recursively search subdirectories
+        findMarkdownFiles(fullPath, relPath)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const content = readFileSync(fullPath, 'utf-8')
+        const { data, content: body } = matter(content)
+        
+        // Use relative path without extension as ID if not specified
+        // Keep slashes for nested path structure
+        const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
+        
+        rules.push({
+          metadata: {
+            id: data.id || defaultId,
+            description: data.description,
+            alwaysApply: data.alwaysApply,
+            globs: data.globs,
+            manual: data.manual,
+            ...data
+          },
+          content: body.trim()
+        })
+      }
+    }
+  }
+  
+  findMarkdownFiles(agentDir)
+  
+  return {
+    format: 'agent',
+    filePath: agentDir,
+    rules
   }
 }
 

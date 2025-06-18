@@ -1,7 +1,7 @@
 import {
   importAll,
-  toAgentMarkdown,
-  parseAgentMarkdown,
+  importAgent,
+  exportToAgent,
   exportAll,
 } from '../../src/index.js';
 import type { RuleBlock } from '../../src/types.js';
@@ -21,26 +21,28 @@ function copyExampleWorkspace(tmp: string) {
     cpSync(exampleSrc, tmp, { recursive: true });
   } else {
     // Create a minimal example if the example directory doesn't exist
-    const agentMd = `<!-- @meta
+    const agentDir = join(tmp, '.agent');
+    const { mkdirSync } = require('fs');
+    mkdirSync(agentDir, { recursive: true });
+    
+    writeFileSync(join(agentDir, 'test-rule.md'), `---
 id: test-rule
 alwaysApply: true
 priority: high
--->
+---
 
 ## Test Rule
 
-This is a test rule for integration testing.
-
-<!-- @meta
+This is a test rule for integration testing.`, 'utf8');
+    
+    writeFileSync(join(agentDir, 'another-rule.md'), `---
 id: another-rule
 scope: src/**
--->
+---
 
 ## Another Rule
 
-Another test rule with scope.`;
-    
-    writeFileSync(join(tmp, '.agentconfig'), agentMd, 'utf8');
+Another test rule with scope.`, 'utf8');
   }
 }
 
@@ -58,21 +60,21 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     const import1 = await importAll(tmp);
     let rules1 = import1.results.flatMap(r => r.rules);
 
-    // If no rules found (no example files), parse the .agentconfig we created
-    if (rules1.length === 0 && existsSync(join(tmp, '.agentconfig'))) {
-      const content = readFileSync(join(tmp, '.agentconfig'), 'utf8');
-      rules1 = parseAgentMarkdown(content);
+    // If no rules found from other formats, check .agent directory
+    if (rules1.length === 0 && existsSync(join(tmp, '.agent'))) {
+      const agentImport = importAgent(join(tmp, '.agent'));
+      rules1 = agentImport.rules;
     }
 
     expect(rules1.length).toBeGreaterThan(0);
 
-    /* ---------------- 2. WRITE UNIFIED .agentconfig ------------------- */
-    const agentMd = toAgentMarkdown(rules1);
-    const agentPath = join(tmp, '.agentconfig-generated');
-    writeFileSync(agentPath, agentMd, 'utf8');
+    /* ---------------- 2. EXPORT TO .agent/ DIRECTORY ------------------- */
+    const exportDir = join(tmp, 'test-export');
+    exportToAgent(rules1, exportDir);
 
-    /* ---------------- 3. PARSE THE GENERATED FILE ------------------ */
-    const parsedBack = parseAgentMarkdown(readFileSync(agentPath, 'utf8'));
+    /* ---------------- 3. RE-IMPORT FROM .agent/ DIRECTORY -------------- */
+    const reimport = importAgent(join(exportDir, '.agent'));
+    const parsedBack = reimport.rules;
     
     // Remove position information for comparison (it's added during parsing)
     const normalizeRules = (rules: RuleBlock[]) => 
@@ -113,6 +115,7 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     
     /* ---------------- 7. VERIFY ALL FORMATS EXPORTED ---------------- */
     const formats = import2.results.map(r => r.format).sort();
+    expect(formats).toContain('agent');
     expect(formats).toContain('copilot');
     expect(formats).toContain('cursor');
     expect(formats).toContain('cline');
@@ -150,20 +153,27 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
       }
     ];
 
-    // Write to .agentconfig
-    const agentMd = toAgentMarkdown(complexRules);
-    const testPath = join(tmp, 'complex-test.agentconfig');
-    writeFileSync(testPath, agentMd, 'utf8');
+    // Write to .agent directory
+    const complexDir = join(tmp, 'complex-test');
+    exportToAgent(complexRules, complexDir);
 
     // Parse back
-    const parsed = parseAgentMarkdown(readFileSync(testPath, 'utf8'));
+    const reimport = importAgent(join(complexDir, '.agent'));
+    const parsed = reimport.rules;
     
     // Verify all metadata is preserved
     expect(parsed.length).toBe(3);
-    expect(parsed[0].metadata.alwaysApply).toBe(true);
-    expect(parsed[0].metadata.priority).toBe('high');
-    expect(parsed[1].metadata.scope).toEqual(['src/**/*.ts', 'test/**/*.ts']);
-    expect(parsed[2].metadata.manual).toBe(true);
-    expect(parsed[2].metadata.triggers).toEqual(['@file-change']);
+    
+    // Sort by ID to ensure consistent order
+    const sortedParsed = [...parsed].sort((a, b) => a.metadata.id.localeCompare(b.metadata.id));
+    const alwaysRule = sortedParsed.find(r => r.metadata.id === 'always-rule');
+    const scopedRule = sortedParsed.find(r => r.metadata.id === 'scoped-rule');
+    const manualRule = sortedParsed.find(r => r.metadata.id === 'manual-rule');
+    
+    expect(alwaysRule?.metadata.alwaysApply).toBe(true);
+    expect(alwaysRule?.metadata.priority).toBe('high');
+    expect(scopedRule?.metadata.scope).toEqual(['src/**/*.ts', 'test/**/*.ts']);
+    expect(manualRule?.metadata.manual).toBe(true);
+    expect(manualRule?.metadata.triggers).toEqual(['@file-change']);
   });
 });

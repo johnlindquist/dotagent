@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "🎨 AgentConfig Color & Dry-Run Demo"
-echo "==================================="
+echo "🎨 DotAgent Color & Dry-Run Demo"
+echo "================================"
 echo ""
 
 # Show help with colors
@@ -10,16 +10,23 @@ echo "-------------------"
 node ../dist/cli.js --help | head -20
 echo ""
 
+# Create .agent directory if not exists
+mkdir -p .agent
+echo '---
+id: demo-rule
+---
+Demo rule content' > .agent/demo-rule.md
+
 # Test dry-run export
 echo "2. Dry-run export (preview mode):"
 echo "---------------------------------"
-node ../dist/cli.js export .agentconfig --dry-run
+node ../dist/cli.js export . --dry-run
 echo ""
 
 # Test actual export
 echo "3. Actual export:"
 echo "-----------------"
-node ../dist/cli.js export .agentconfig
+node ../dist/cli.js export .
 echo ""
 
 # Test import with no files

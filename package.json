@@ -1,7 +1,7 @@
 {
-  "name": "agentconfig",
+  "name": "dotagent",
   "version": "0.1.0",
-  "description": "Universal AI agent configuration parser and converter",
+  "description": "Multi-file AI agent configuration manager with .agent directory support",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -14,7 +14,7 @@
     }
   },
   "bin": {
-    "agentconfig": "./dist/cli.js"
+    "dotagent": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -39,13 +39,13 @@
   ],
   "author": "John Lindquist",
   "license": "MIT",
-  "homepage": "https://github.com/johnlindquist/agentconfig#readme",
+  "homepage": "https://github.com/johnlindquist/dotagent#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/johnlindquist/agentconfig.git"
+    "url": "git+https://github.com/johnlindquist/dotagent.git"
   },
   "bugs": {
-    "url": "https://github.com/johnlindquist/agentconfig/issues"
+    "url": "https://github.com/johnlindquist/dotagent/issues"
   },
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
