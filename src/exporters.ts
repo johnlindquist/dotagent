@@ -58,22 +58,32 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  rules.forEach((rule, idx) => {
+  let privateIndex = 0
+
+  rules.forEach(rule => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
     let filePath: string
-    const orderPrefix = String(idx + 1).padStart(3, '0') + '-'
     
     if (rule.metadata.id && rule.metadata.id.includes('/')) {
       // Create nested structure based on ID
       const parts = rule.metadata.id.split('/')
-      const fileName = parts.pop() + '.md' // no prefix for nested structure
+      const fileName = parts.pop() + '.md'
       const subDir = join(agentDir, ...parts)
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${orderPrefix}${rule.metadata.id || 'rule'}.md`
-      filePath = join(agentDir, filename)
+      filename = `${rule.metadata.id || 'rule'}.md`
+      if (rule.metadata.private) {
+        const privDir = join(agentDir, 'private')
+        mkdirSync(privDir, { recursive: true })
+        // add numeric prefix to retain original order among private files
+        const prefix = String(privateIndex + 1).padStart(3, '0') + '-'
+        privateIndex++
+        filePath = join(privDir, prefix + filename)
+      } else {
+        filePath = join(agentDir, filename)
+      }
     }
 
     // Prepare front matter data - filter out undefined values
@@ -249,7 +259,7 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, optio
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options?: ExportOptions): void {
+export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: true }): void {
   // Export to all supported formats
   if (!dryRun) {
     exportToAgent(rules, repoPath, options)
