@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { parseArgs } from 'util'
 import { importAll, importAgent, exportToAgent, exportAll } from './index.js'
@@ -14,9 +14,11 @@ const { values, positionals } = parseArgs({
     format: { type: 'string', short: 'f' },
     overwrite: { type: 'boolean', short: 'w' },
     'dry-run': { type: 'boolean', short: 'd' },
+    'include-private': { type: 'boolean' },
+    'skip-private': { type: 'boolean' },
   },
   allowPositionals: true
-})
+}) as { values: any; positionals: string[] }
 
 function showHelp() {
   console.log(`
@@ -159,6 +161,12 @@ async function main() {
       const rules = result.rules
       
       console.log(color.success(`Found ${color.number(rules.length.toString())} rule(s) in ${color.path(agentDir)}`))
+      
+      // Count private rules
+      const privateRuleCount = rules.filter(r => r.metadata.private).length
+      if (privateRuleCount > 0) {
+        console.log(color.dim(`Including ${privateRuleCount} private rule(s)`))
+      }
 
       const outputDir = values.output || repoPath
       
@@ -180,11 +188,19 @@ async function main() {
           console.log(`  ${color.format(target.format)}: ${color.path(join(outputDir, target.path))}`)
         }
       } else {
-        exportAll(rules, outputDir, isDryRun)
+        const options = { includePrivate: values['include-private'] }
+        exportAll(rules, outputDir, isDryRun, options)
         console.log(color.success('Exported to:'))
         for (const target of exportTargets) {
           console.log(`  ${color.format(target.format)}: ${color.path(join(outputDir, target.path))}`)
         }
+        
+        if (!values['include-private'] && privateRuleCount > 0) {
+          console.log(color.dim(`\nExcluded ${privateRuleCount} private rule(s). Use --include-private to include them.`))
+        }
+        
+        // Update .gitignore with private patterns
+        updateGitignore(outputDir)
       }
       break
     }
@@ -280,6 +296,39 @@ async function main() {
       console.error(color.error(`Unknown command: ${command}`))
       showHelp()
       process.exit(1)
+  }
+}
+
+function updateGitignore(repoPath: string): void {
+  const gitignorePath = join(repoPath, '.gitignore')
+  const privatePatterns = [
+    '# Added by dotagent: ignore private AI rule files',
+    '.agent/**/*.local.md',
+    '.agent/private/**',
+    '.github/copilot-instructions.local.md',
+    '.cursor/rules/**/*.local.mdc',
+    '.cursor/rules-private/**',
+    '.clinerules.local',
+    '.clinerules/private/**',
+    '.windsurfrules.local',
+    '.rules.local',
+    'AGENTS.local.md',
+    'CONVENTIONS.local.md',
+    'CLAUDE.local.md'
+  ].join('\n')
+  
+  if (existsSync(gitignorePath)) {
+    const content = readFileSync(gitignorePath, 'utf-8')
+    
+    // Check if patterns are already present
+    if (!content.includes('# Added by dotagent:')) {
+      console.log(color.info('Updating .gitignore with private file patterns'))
+      appendFileSync(gitignorePath, '\n\n' + privatePatterns + '\n', 'utf-8')
+    }
+  } else {
+    // Create new .gitignore
+    console.log(color.info('Creating .gitignore with private file patterns'))
+    writeFileSync(gitignorePath, privatePatterns + '\n', 'utf-8')
   }
 }
 

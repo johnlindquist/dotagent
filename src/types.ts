@@ -7,6 +7,7 @@ export interface RuleMetadata {
   priority?: 'high' | 'medium' | 'low'
   description?: string
   globs?: string[]
+  private?: boolean // Flag for private/local rules
   [key: string]: unknown // Allow additional metadata
 }
 
@@ -35,6 +36,8 @@ export interface ExportOptions {
   format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo'
   outputPath?: string
   overwrite?: boolean
+  includePrivate?: boolean // Include private rules in export
+  skipPrivate?: boolean // Skip private rules on import
 }
 
 export interface ParserOptions {
