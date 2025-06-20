@@ -260,18 +260,18 @@ export function exportToQodo(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false): void {
+export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options?: ExportOptions): void {
   // Export to all supported formats
   if (!dryRun) {
-    exportToAgent(rules, repoPath)
-    exportToCopilot(rules, join(repoPath, '.github', 'copilot-instructions.md'))
-    exportToCursor(rules, repoPath)
-    exportToCline(rules, join(repoPath, '.clinerules'))
-    exportToWindsurf(rules, join(repoPath, '.windsurfrules'))
-    exportToZed(rules, join(repoPath, '.rules'))
-    exportToCodex(rules, join(repoPath, 'AGENTS.md'))
-    exportToAider(rules, join(repoPath, 'CONVENTIONS.md'))
-    exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'))
+    exportToAgent(rules, repoPath, options)
+    exportToCopilot(rules, join(repoPath, '.github', 'copilot-instructions.md'), options)
+    exportToCursor(rules, repoPath, options)
+    exportToCline(rules, join(repoPath, '.clinerules'), options)
+    exportToWindsurf(rules, join(repoPath, '.windsurfrules'), options)
+    exportToZed(rules, join(repoPath, '.rules'), options)
+    exportToCodex(rules, join(repoPath, 'AGENTS.md'), options)
+    exportToAider(rules, join(repoPath, 'CONVENTIONS.md'), options)
+    exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'))
   }
 }
