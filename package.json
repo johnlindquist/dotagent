@@ -23,6 +23,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest",
+    "pretest:ci": "pnpm build",
     "test:ci": "vitest run",
     "typecheck": "tsc --noEmit"
   },

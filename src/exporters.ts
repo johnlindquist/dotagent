@@ -58,7 +58,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  for (const rule of rules) {
+  rules.forEach(rule => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
     let filePath: string
@@ -72,7 +72,14 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
       filePath = join(subDir, fileName)
     } else {
       filename = `${rule.metadata.id || 'rule'}.md`
-      filePath = join(agentDir, filename)
+      // Place private rules in a dedicated subdirectory to preserve original hierarchy
+      if (rule.metadata.private && rule.metadata.id?.startsWith('personal-')) {
+        const privDir = join(agentDir, 'private')
+        mkdirSync(privDir, { recursive: true })
+        filePath = join(privDir, filename)
+      } else {
+        filePath = join(agentDir, filename)
+      }
     }
 
     // Prepare front matter data - filter out undefined values
@@ -100,7 +107,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
     // Create Markdown content with frontmatter
     const mdContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdContent, 'utf-8')
-  }
+  })
 }
 
 export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {

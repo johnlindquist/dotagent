@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
+import { readFileSync, existsSync, readdirSync, statSync, Dirent } from 'fs'
 import { join, basename } from 'path'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
@@ -221,6 +221,13 @@ export function importAgent(agentDir: string): ImportResult {
   function findMarkdownFiles(dir: string, relativePath = ''): void {
     const entries = readdirSync(dir, { withFileTypes: true })
     
+    // Ensure deterministic ordering: process directories before files, then sort alphabetically
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1
+      if (!a.isDirectory() && b.isDirectory()) return 1
+      return a.name.localeCompare(b.name)
+    })
+    
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
       const relPath = relativePath ? join(relativePath, entry.name) : entry.name
@@ -232,9 +239,14 @@ export function importAgent(agentDir: string): ImportResult {
         const content = readFileSync(fullPath, 'utf-8')
         const { data, content: body } = matter(content)
         
-        // Use relative path without extension as ID if not specified
-        // Keep slashes for nested path structure
-        const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
+        // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+        let segments = relPath
+          .replace(/\.md$/, '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .map((s: string) => s.replace(/^\d{2,}-/, ''))
+        if (segments[0] === 'private') segments = segments.slice(1)
+        const defaultId = segments.join('/')
         
         // Check if this is a private rule (either by path or frontmatter)
         const isPrivateFile = isPrivateRule(fullPath)
@@ -273,6 +285,13 @@ export function importCursor(rulesDir: string): ImportResult {
   function findMdcFiles(dir: string, relativePath = ''): void {
     const entries = readdirSync(dir, { withFileTypes: true })
     
+    // Ensure deterministic ordering: process directories before files, then sort alphabetically
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1
+      if (!a.isDirectory() && b.isDirectory()) return 1
+      return a.name.localeCompare(b.name)
+    })
+    
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
       const relPath = relativePath ? join(relativePath, entry.name) : entry.name
@@ -284,9 +303,17 @@ export function importCursor(rulesDir: string): ImportResult {
         const content = readFileSync(fullPath, 'utf-8')
         const { data, content: body } = matter(content)
         
+        // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+        let segments = relPath
+          .replace(/\.mdc$/, '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .map((s: string) => s.replace(/^\d{2,}-/, ''))
+        if (segments[0] === 'private') segments = segments.slice(1)
+        const defaultId = segments.join('/')
+        
         // Check if this is a private rule
         const isPrivateFile = isPrivateRule(fullPath)
-        const defaultId = relPath.replace(/\.mdc$/, '').replace(/\\/g, '/')
         
         const metadata: any = {
           id: data.id || defaultId,
@@ -343,6 +370,13 @@ export function importCline(rulesPath: string): ImportResult {
     function findMdFiles(dir: string, relativePath = ''): void {
       const entries = readdirSync(dir, { withFileTypes: true })
       
+      // Ensure deterministic ordering: process directories before files, then sort alphabetically
+      entries.sort((a: Dirent, b: Dirent) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1
+        if (!a.isDirectory() && b.isDirectory()) return 1
+        return a.name.localeCompare(b.name)
+      })
+      
       for (const entry of entries) {
         const fullPath = join(dir, entry.name)
         const relPath = relativePath ? join(relativePath, entry.name) : entry.name
@@ -352,7 +386,14 @@ export function importCline(rulesPath: string): ImportResult {
         } else if (entry.isFile() && entry.name.endsWith('.md')) {
           const content = readFileSync(fullPath, 'utf-8')
           const isPrivateFile = isPrivateRule(fullPath)
-          const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
+          // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+          let segments = relPath
+            .replace(/\.md$/, '')
+            .replace(/\\/g, '/')
+            .split('/')
+            .map((s: string) => s.replace(/^\d{2,}-/, ''))
+          if (segments[0] === 'private') segments = segments.slice(1)
+          const defaultId = segments.join('/')
           
           const metadata: any = {
             id: defaultId,
