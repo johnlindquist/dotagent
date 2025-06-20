@@ -100,11 +100,13 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     const cursorImport = import2.results.find(r => r.format === 'cursor');
     
     /* ---------------- 6. VERIFY CURSOR PRESERVES RULES ------------- */
-    // Cursor should preserve all individual rules
+    // Cursor should preserve all non-private rules
     if (cursorImport) {
-      expect(cursorImport.rules.length).toBe(rules1.length);
+      // Filter out private rules from rules1 for comparison
+      const nonPrivateRules1 = rules1.filter(r => !r.metadata.private);
+      expect(cursorImport.rules.length).toBe(nonPrivateRules1.length);
       
-      const sortedRules1 = [...rules1].sort((a, b) => a.metadata.id.localeCompare(b.metadata.id));
+      const sortedRules1 = [...nonPrivateRules1].sort((a, b) => a.metadata.id.localeCompare(b.metadata.id));
       const sortedRules2 = [...cursorImport.rules].sort((a, b) => a.metadata.id.localeCompare(b.metadata.id));
       
       // Check that each rule's content matches

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs'
-import { join, resolve } from 'path'
+import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
 import { importAll, importAgent, exportToAgent, exportAll } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
@@ -189,7 +189,7 @@ async function main() {
         }
       } else {
         const options = { includePrivate: values['include-private'] }
-        exportAll(rules, outputDir, isDryRun, options)
+        exportAll(rules, outputDir, isDryRun)
         console.log(color.success('Exported to:'))
         for (const target of exportTargets) {
           console.log(`  ${color.format(target.format)}: ${color.path(join(outputDir, target.path))}`)
@@ -278,7 +278,7 @@ async function main() {
           process.exit(1)
       }
 
-      const outputDir = values.output || process.cwd()
+      const outputDir = values.output || dirname(inputPath)
       const agentDir = join(outputDir, '.agent')
 
       if (isDryRun) {

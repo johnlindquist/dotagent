@@ -122,7 +122,7 @@ describe('CLI smoke tests', () => {
 
       expect(result.exitCode).toBe(0);
       
-      const agentDir = join(dir, '.agent');
+      const agentDir = join(dirname(copilotPath), '.agent');
       expect(existsSync(agentDir)).toBe(true);
       
       const files = require('fs').readdirSync(agentDir).filter(f => f.endsWith('.md'));
