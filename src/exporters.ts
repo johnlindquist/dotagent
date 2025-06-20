@@ -41,9 +41,12 @@ export function toAgentMarkdown(rules: RuleBlock[]): string {
   return sections.join('\n\n')
 }
 
-export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {
+export function exportToCopilot(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
   // Combine all rules into a single markdown document
-  const content = rules
+  const content = filteredRules
     .map(rule => rule.content)
     .join('\n\n---\n\n')
 
@@ -51,7 +54,7 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
+export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
@@ -83,9 +86,11 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
     if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
     if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
 
-    // Add other metadata fields
+    // Add other metadata fields but exclude 'private' if it's false
     for (const [key, value] of Object.entries(rule.metadata)) {
       if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
+        // Don't include private: false in frontmatter
+        if (key === 'private' && value === false) continue
         frontMatterBase[key] = value
       }
     }
@@ -98,13 +103,28 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
   }
 }
 
-export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
+export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const rulesDir = join(outputDir, '.cursor', 'rules')
   mkdirSync(rulesDir, { recursive: true })
 
-  for (const rule of rules) {
-    const filename = `${rule.metadata.id || 'rule'}.mdc`
-    const filePath = join(rulesDir, filename)
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  for (const rule of filteredRules) {
+    // Support nested folders based on rule ID
+    let filePath: string
+    
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      // Create nested structure based on ID
+      const parts = rule.metadata.id.split('/')
+      const fileName = parts.pop() + '.mdc'
+      const subDir = join(rulesDir, ...parts)
+      mkdirSync(subDir, { recursive: true })
+      filePath = join(subDir, fileName)
+    } else {
+      const filename = `${rule.metadata.id || 'rule'}.mdc`
+      filePath = join(rulesDir, filename)
+    }
 
     // Prepare front matter data - filter out undefined values
     const frontMatterBase: Record<string, unknown> = {}
@@ -117,9 +137,11 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
     if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
     if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
 
-    // Add other metadata fields
+    // Add other metadata fields but exclude 'private' if it's false
     for (const [key, value] of Object.entries(rule.metadata)) {
       if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
+        // Don't include private: false in frontmatter
+        if (key === 'private' && value === false) continue
         frontMatterBase[key] = value
       }
     }
@@ -132,10 +154,13 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
   }
 }
 
-export function exportToCline(rules: RuleBlock[], outputPath: string): void {
+export function exportToCline(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
   if (outputPath.endsWith('.clinerules')) {
     // Single file mode
-    const content = rules
+    const content = filteredRules
       .map(rule => {
         const header = rule.metadata.description ? `## ${rule.metadata.description}\n\n` : ''
         return header + rule.content
@@ -149,7 +174,7 @@ export function exportToCline(rules: RuleBlock[], outputPath: string): void {
     const rulesDir = join(outputPath, '.clinerules')
     mkdirSync(rulesDir, { recursive: true })
 
-    rules.forEach((rule, index) => {
+    filteredRules.forEach((rule, index) => {
       const filename = `${String(index + 1).padStart(2, '0')}-${rule.metadata.id || 'rule'}.md`
       const filePath = join(rulesDir, filename)
       writeFileSync(filePath, rule.content, 'utf-8')
@@ -157,8 +182,11 @@ export function exportToCline(rules: RuleBlock[], outputPath: string): void {
   }
 }
 
-export function exportToWindsurf(rules: RuleBlock[], outputPath: string): void {
-  const content = rules
+export function exportToWindsurf(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
     .map(rule => rule.content)
     .join('\n\n')
 
@@ -166,8 +194,11 @@ export function exportToWindsurf(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportToZed(rules: RuleBlock[], outputPath: string): void {
-  const content = rules
+export function exportToZed(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
     .map(rule => rule.content)
     .join('\n\n')
 
@@ -175,8 +206,11 @@ export function exportToZed(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportToCodex(rules: RuleBlock[], outputPath: string): void {
-  const content = rules
+export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
     .map(rule => {
       const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
       return header + rule.content
@@ -187,8 +221,11 @@ export function exportToCodex(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportToAider(rules: RuleBlock[], outputPath: string): void {
-  const content = rules
+export function exportToAider(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
     .map(rule => rule.content)
     .join('\n\n')
 
@@ -196,8 +233,11 @@ export function exportToAider(rules: RuleBlock[], outputPath: string): void {
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportToClaudeCode(rules: RuleBlock[], outputPath: string): void {
-  const content = rules
+export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
     .map(rule => {
       const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
       return header + rule.content
@@ -208,18 +248,18 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string): void
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false): void {
+export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options?: ExportOptions): void {
   // Export to all supported formats
   if (!dryRun) {
-    exportToAgent(rules, repoPath)
-    exportToCopilot(rules, join(repoPath, '.github', 'copilot-instructions.md'))
-    exportToCursor(rules, repoPath)
-    exportToCline(rules, join(repoPath, '.clinerules'))
-    exportToWindsurf(rules, join(repoPath, '.windsurfrules'))
-    exportToZed(rules, join(repoPath, '.rules'))
-    exportToCodex(rules, join(repoPath, 'AGENTS.md'))
-    exportToAider(rules, join(repoPath, 'CONVENTIONS.md'))
-    exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'))
+    exportToAgent(rules, repoPath, options)
+    exportToCopilot(rules, join(repoPath, '.github', 'copilot-instructions.md'), options)
+    exportToCursor(rules, repoPath, options)
+    exportToCline(rules, join(repoPath, '.clinerules'), options)
+    exportToWindsurf(rules, join(repoPath, '.windsurfrules'), options)
+    exportToZed(rules, join(repoPath, '.rules'), options)
+    exportToCodex(rules, join(repoPath, 'AGENTS.md'), options)
+    exportToAider(rules, join(repoPath, 'CONVENTIONS.md'), options)
+    exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
   }
 }
 

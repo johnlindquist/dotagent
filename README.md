@@ -59,6 +59,9 @@ agentconfig export .
 
 # Export to specific directory
 agentconfig export . -o /path/to/repo
+
+# Include private rules in export
+agentconfig export --include-private
 ```
 
 ### Convert a specific file
@@ -121,6 +124,91 @@ scope: src/components/**
 - Use functional components with hooks
 - Follow atomic design principles
 - Include unit tests for all components
+```
+
+## Private Rules
+
+DotAgent supports private/local rules that are automatically excluded from exports and version control. This is useful for:
+- Personal preferences that shouldn't be shared with the team
+- Client-specific requirements  
+- Temporary experimental rules
+- Sensitive information or internal processes
+
+### Naming Convention
+
+Private rules are identified by:
+1. **Filename suffix**: `*.local.md` (e.g., `api-keys.local.md`)
+2. **Directory**: Files in `/private/` subdirectories
+3. **Frontmatter**: `private: true` in YAML frontmatter
+
+### Examples
+
+```markdown
+<!-- .agent/team-rules.md (PUBLIC) -->
+---
+id: team-rules
+---
+# Team Standards
+Shared team guidelines
+```
+
+```markdown
+<!-- .agent/my-preferences.local.md (PRIVATE) -->
+---
+id: my-preferences
+---
+# My Personal Preferences
+These won't be exported
+```
+
+```markdown
+<!-- .agent/private/client-specific.md (PRIVATE) -->
+---
+id: client-rules
+---
+# Client-Specific Rules
+Confidential requirements
+```
+
+### Private Rules in Other Formats
+
+| Format | Public File | Private File |
+|--------|-------------|---------------|
+| Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.local.md` |
+| Cursor | `.cursor/rules/*.mdc` | `.cursor/rules/*.local.mdc` |
+| Cline | `.clinerules` | `.clinerules.local` |
+| Windsurf | `.windsurfrules` | `.windsurfrules.local` |
+| Zed | `.rules` | `.rules.local` |
+| Claude | `CLAUDE.md` | `CLAUDE.local.md` |
+
+### CLI Options
+
+```bash
+# Export including private rules
+dotagent export --include-private
+
+# Import but skip private rules
+dotagent import . --skip-private
+```
+
+### Automatic .gitignore
+
+When you run `dotagent export`, it automatically updates your `.gitignore` with patterns for private files:
+
+```gitignore
+# Added by dotagent: ignore private AI rule files
+.agent/**/*.local.md
+.agent/private/**
+.github/copilot-instructions.local.md
+.cursor/rules/**/*.local.mdc
+.cursor/rules-private/**
+.clinerules.local
+.clinerules/private/**
+.windsurfrules.local
+.rules.local
+AGENTS.local.md
+CONVENTIONS.local.md
+CLAUDE.local.md
 ```
 
 ## Programmatic Usage

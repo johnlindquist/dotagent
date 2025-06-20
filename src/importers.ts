@@ -4,6 +4,12 @@ import matter from 'gray-matter'
 import yaml from 'js-yaml'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
 
+// Helper function to detect if a file/path indicates a private rule
+function isPrivateRule(filePath: string): boolean {
+  const lowerPath = filePath.toLowerCase()
+  return lowerPath.includes('.local.') || lowerPath.includes('/private/') || lowerPath.includes('\\private\\')
+}
+
 export async function importAll(repoPath: string): Promise<ImportResults> {
   const results: ImportResult[] = []
   const errors: Array<{ file: string; error: string }> = []
@@ -25,6 +31,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       results.push(importCopilot(copilotPath))
     } catch (e) {
       errors.push({ file: copilotPath, error: String(e) })
+    }
+  }
+  
+  // Check for local VS Code Copilot instructions
+  const copilotLocalPath = join(repoPath, '.github', 'copilot-instructions.local.md')
+  if (existsSync(copilotLocalPath)) {
+    try {
+      results.push(importCopilot(copilotLocalPath))
+    } catch (e) {
+      errors.push({ file: copilotLocalPath, error: String(e) })
     }
   }
   
@@ -58,6 +74,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for local Cline rules
+  const clinerulesLocal = join(repoPath, '.clinerules.local')
+  if (existsSync(clinerulesLocal)) {
+    try {
+      results.push(importCline(clinerulesLocal))
+    } catch (e) {
+      errors.push({ file: clinerulesLocal, error: String(e) })
+    }
+  }
+  
   // Check for Windsurf rules
   const windsurfRules = join(repoPath, '.windsurfrules')
   if (existsSync(windsurfRules)) {
@@ -65,6 +91,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       results.push(importWindsurf(windsurfRules))
     } catch (e) {
       errors.push({ file: windsurfRules, error: String(e) })
+    }
+  }
+  
+  // Check for local Windsurf rules
+  const windsurfRulesLocal = join(repoPath, '.windsurfrules.local')
+  if (existsSync(windsurfRulesLocal)) {
+    try {
+      results.push(importWindsurf(windsurfRulesLocal))
+    } catch (e) {
+      errors.push({ file: windsurfRulesLocal, error: String(e) })
     }
   }
   
@@ -78,6 +114,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for local Zed rules
+  const zedRulesLocal = join(repoPath, '.rules.local')
+  if (existsSync(zedRulesLocal)) {
+    try {
+      results.push(importZed(zedRulesLocal))
+    } catch (e) {
+      errors.push({ file: zedRulesLocal, error: String(e) })
+    }
+  }
+  
   // Check for OpenAI Codex AGENTS.md
   const agentsMd = join(repoPath, 'AGENTS.md')
   if (existsSync(agentsMd)) {
@@ -85,6 +131,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       results.push(importCodex(agentsMd))
     } catch (e) {
       errors.push({ file: agentsMd, error: String(e) })
+    }
+  }
+  
+  // Check for local AGENTS.md
+  const agentsLocalMd = join(repoPath, 'AGENTS.local.md')
+  if (existsSync(agentsLocalMd)) {
+    try {
+      results.push(importCodex(agentsLocalMd))
+    } catch (e) {
+      errors.push({ file: agentsLocalMd, error: String(e) })
     }
   }
   
@@ -98,17 +154,55 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for local CLAUDE.md
+  const claudeLocalMd = join(repoPath, 'CLAUDE.local.md')
+  if (existsSync(claudeLocalMd)) {
+    try {
+      results.push(importClaudeCode(claudeLocalMd))
+    } catch (e) {
+      errors.push({ file: claudeLocalMd, error: String(e) })
+    }
+  }
+  
+  // Check for CONVENTIONS.md (Aider)
+  const conventionsMd = join(repoPath, 'CONVENTIONS.md')
+  if (existsSync(conventionsMd)) {
+    try {
+      results.push(importAider(conventionsMd))
+    } catch (e) {
+      errors.push({ file: conventionsMd, error: String(e) })
+    }
+  }
+  
+  // Check for local CONVENTIONS.md
+  const conventionsLocalMd = join(repoPath, 'CONVENTIONS.local.md')
+  if (existsSync(conventionsLocalMd)) {
+    try {
+      results.push(importAider(conventionsLocalMd))
+    } catch (e) {
+      errors.push({ file: conventionsLocalMd, error: String(e) })
+    }
+  }
+  
   return { results, errors }
 }
 
 export function importCopilot(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
+  const isPrivate = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'copilot-instructions',
+    alwaysApply: true,
+    description: 'GitHub Copilot custom instructions'
+  }
+  
+  if (isPrivate) {
+    metadata.private = true
+  }
+  
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: 'copilot-instructions',
-      alwaysApply: true,
-      description: 'GitHub Copilot custom instructions'
-    },
+    metadata,
     content: content.trim()
   }]
   
@@ -142,15 +236,21 @@ export function importAgent(agentDir: string): ImportResult {
         // Keep slashes for nested path structure
         const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
         
+        // Check if this is a private rule (either by path or frontmatter)
+        const isPrivateFile = isPrivateRule(fullPath)
+        
+        const metadata: any = {
+          id: data.id || defaultId,
+          ...data
+        }
+        
+        // Only set private if it's true (from file pattern or frontmatter)
+        if (data.private === true || (data.private === undefined && isPrivateFile)) {
+          metadata.private = true
+        }
+        
         rules.push({
-          metadata: {
-            id: data.id || defaultId,
-            description: data.description,
-            alwaysApply: data.alwaysApply,
-            globs: data.globs,
-            manual: data.manual,
-            ...data
-          },
+          metadata,
           content: body.trim()
         })
       }
@@ -168,25 +268,45 @@ export function importAgent(agentDir: string): ImportResult {
 
 export function importCursor(rulesDir: string): ImportResult {
   const rules: RuleBlock[] = []
-  const files = readdirSync(rulesDir).filter(f => f.endsWith('.mdc'))
   
-  for (const file of files) {
-    const filePath = join(rulesDir, file)
-    const content = readFileSync(filePath, 'utf-8')
-    const { data, content: body } = matter(content)
+  // Recursively find all .mdc files
+  function findMdcFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
     
-    rules.push({
-      metadata: {
-        id: data.id || basename(file, '.mdc'),
-        description: data.description,
-        alwaysApply: data.alwaysApply,
-        globs: data.globs,
-        manual: data.manual,
-        ...data
-      },
-      content: body.trim()
-    })
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+      
+      if (entry.isDirectory()) {
+        // Recursively search subdirectories
+        findMdcFiles(fullPath, relPath)
+      } else if (entry.isFile() && entry.name.endsWith('.mdc')) {
+        const content = readFileSync(fullPath, 'utf-8')
+        const { data, content: body } = matter(content)
+        
+        // Check if this is a private rule
+        const isPrivateFile = isPrivateRule(fullPath)
+        const defaultId = relPath.replace(/\.mdc$/, '').replace(/\\/g, '/')
+        
+        const metadata: any = {
+          id: data.id || defaultId,
+          ...data
+        }
+        
+        // Only set private if it's true (from file pattern or frontmatter)
+        if (data.private === true || (data.private === undefined && isPrivateFile)) {
+          metadata.private = true
+        }
+        
+        rules.push({
+          metadata,
+          content: body.trim()
+        })
+      }
+    }
   }
+  
+  findMdcFiles(rulesDir)
   
   return {
     format: 'cursor',
@@ -219,33 +339,57 @@ export function importCline(rulesPath: string): ImportResult {
   
   // Check if it's a directory
   if (existsSync(rulesPath) && statSync(rulesPath).isDirectory()) {
-    // Multiple files in .clinerules/ directory
-    const files = readdirSync(rulesPath)
-      .filter(f => f.endsWith('.md'))
-      .sort() // Ensure consistent order
-    
-    for (const file of files) {
-      const filePath = join(rulesPath, file)
-      const content = readFileSync(filePath, 'utf-8')
+    // Recursively find all .md files
+    function findMdFiles(dir: string, relativePath = ''): void {
+      const entries = readdirSync(dir, { withFileTypes: true })
       
-      rules.push({
-        metadata: {
-          id: basename(file, '.md'),
-          alwaysApply: true,
-          description: `Cline rules from ${file}`
-        },
-        content: content.trim()
-      })
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name)
+        const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+        
+        if (entry.isDirectory()) {
+          findMdFiles(fullPath, relPath)
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          const content = readFileSync(fullPath, 'utf-8')
+          const isPrivateFile = isPrivateRule(fullPath)
+          const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
+          
+          const metadata: any = {
+            id: defaultId,
+            alwaysApply: true,
+            description: `Cline rules from ${relPath}`
+          }
+          
+          if (isPrivateFile) {
+            metadata.private = true
+          }
+          
+          rules.push({
+            metadata,
+            content: content.trim()
+          })
+        }
+      }
     }
+    
+    findMdFiles(rulesPath)
   } else {
     // Single .clinerules file
     const content = readFileSync(rulesPath, 'utf-8')
+    const isPrivateFile = isPrivateRule(rulesPath)
+    
+    const metadata: any = {
+      id: 'cline-rules',
+      alwaysApply: true,
+      description: 'Cline project rules'
+    }
+    
+    if (isPrivateFile) {
+      metadata.private = true
+    }
+    
     rules.push({
-      metadata: {
-        id: 'cline-rules',
-        alwaysApply: true,
-        description: 'Cline project rules'
-      },
+      metadata,
       content: content.trim()
     })
   }
@@ -259,12 +403,20 @@ export function importCline(rulesPath: string): ImportResult {
 
 export function importWindsurf(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'windsurf-rules',
+    alwaysApply: true,
+    description: 'Windsurf AI rules'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: 'windsurf-rules',
-      alwaysApply: true,
-      description: 'Windsurf AI rules'
-    },
+    metadata,
     content: content.trim()
   }]
   
@@ -278,12 +430,20 @@ export function importWindsurf(filePath: string): ImportResult {
 
 export function importZed(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'zed-rules',
+    alwaysApply: true,
+    description: 'Zed editor rules'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: 'zed-rules',
-      alwaysApply: true,
-      description: 'Zed editor rules'
-    },
+    metadata,
     content: content.trim()
   }]
   
@@ -297,14 +457,21 @@ export function importZed(filePath: string): ImportResult {
 
 export function importCodex(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
-  const format = basename(filePath) === 'AGENTS.md' ? 'codex' : 'unknown'
+  const format = basename(filePath) === 'AGENTS.md' || basename(filePath) === 'AGENTS.local.md' ? 'codex' : 'unknown'
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: format === 'codex' ? 'codex-agents' : 'claude-rules',
+    alwaysApply: true,
+    description: format === 'codex' ? 'OpenAI Codex agent instructions' : 'Claude AI instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
   
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: format === 'codex' ? 'codex-agents' : 'claude-rules',
-      alwaysApply: true,
-      description: format === 'codex' ? 'OpenAI Codex agent instructions' : 'Claude AI instructions'
-    },
+    metadata,
     content: content.trim()
   }]
   
@@ -318,12 +485,20 @@ export function importCodex(filePath: string): ImportResult {
 
 export function importAider(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'aider-conventions',
+    alwaysApply: true,
+    description: 'Aider CLI conventions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: 'aider-conventions',
-      alwaysApply: true,
-      description: 'Aider CLI conventions'
-    },
+    metadata,
     content: content.trim()
   }]
   
@@ -337,12 +512,20 @@ export function importAider(filePath: string): ImportResult {
 
 export function importClaudeCode(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'claude-code-instructions',
+    alwaysApply: true,
+    description: 'Claude Code context and instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
   const rules: RuleBlock[] = [{
-    metadata: {
-      id: 'claude-code-instructions',
-      alwaysApply: true,
-      description: 'Claude Code context and instructions'
-    },
+    metadata,
     content: content.trim()
   }]
   
