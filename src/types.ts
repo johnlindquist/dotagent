@@ -33,7 +33,7 @@ export interface ImportResults {
 }
 
 export interface ExportOptions {
-  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo'
+  format?: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo'
   outputPath?: string
   overwrite?: boolean
   includePrivate?: boolean // Include private rules in export

@@ -15,7 +15,14 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(rm:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(gh pr view:*)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
