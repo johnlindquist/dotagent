@@ -77,8 +77,10 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     const parsedBack = reimport.rules;
     
     // Remove position information for comparison (it's added during parsing)
+    // Sort by ID to ensure consistent comparison since order is not guaranteed
     const normalizeRules = (rules: RuleBlock[]) => 
-      rules.map(r => ({ metadata: r.metadata, content: r.content }));
+      rules.map(r => ({ metadata: r.metadata, content: r.content }))
+           .sort((a, b) => a.metadata.id.localeCompare(b.metadata.id));
     
     expect(normalizeRules(parsedBack)).toEqual(normalizeRules(rules1));
 

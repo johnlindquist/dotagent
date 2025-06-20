@@ -151,21 +151,16 @@ export function importAgent(agentDir: string): ImportResult {
         // Use relative path without extension as ID if not specified
         // Keep slashes for nested path structure
         const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
-        
-        // Build metadata object, include only keys with defined values
-        const meta: Record<string, unknown> = { ...(data as Record<string, unknown>) }
-        if (meta.id === undefined) {
-          meta.id = defaultId
-        }
-        // Remove keys with undefined values to keep metadata clean
-        Object.keys(meta).forEach(key => {
-          if (meta[key] === undefined) {
-            delete meta[key]
-          }
-        })
 
         rules.push({
-          metadata: meta as RuleBlock['metadata'],
+          metadata: {
+            id: data.id || defaultId,
+            description: data.description,
+            alwaysApply: data.alwaysApply,
+            globs: data.globs,
+            manual: data.manual,
+            ...data
+          },
           content: body.trim()
         })
       }
@@ -376,6 +371,8 @@ export function importQodo(filePath: string): ImportResult {
       id: 'qodo-best-practices',
       alwaysApply: true,
       description: 'Qodo best practices and coding standards',
+      scope: '**/*',
+      priority: 'high'
     },
     content: content.trim()
   }]

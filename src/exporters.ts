@@ -55,24 +55,20 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  rules.forEach((rule, idx) => {
-    // Determine numeric prefix to preserve original ordering when re-importing
-    const orderPrefix = String(idx + 1).padStart(3, '0')
-
+  rules.forEach((rule) => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
-    let filename: string
     let filePath: string
 
     if (rule.metadata.id && rule.metadata.id.includes('/')) {
-      // For nested IDs, prefix only the final segment to avoid creating directories with numbers
+      // For nested IDs, create subdirectories
       const parts = rule.metadata.id.split('/')
       const last = parts.pop()!
-      const fileName = `${orderPrefix}-${last}.md`
+      const fileName = `${last}.md`
       const subDir = join(agentDir, ...parts)
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${orderPrefix}-${rule.metadata.id || 'rule'}.md`
+      const filename = `${rule.metadata.id || 'rule'}.md`
       filePath = join(agentDir, filename)
     }
 
@@ -156,8 +152,8 @@ export function exportToCline(rules: RuleBlock[], outputPath: string): void {
     const rulesDir = join(outputPath, '.clinerules')
     mkdirSync(rulesDir, { recursive: true })
 
-    rules.forEach((rule, index) => {
-      const filename = `${String(index + 1).padStart(2, '0')}-${rule.metadata.id || 'rule'}.md`
+    rules.forEach((rule) => {
+      const filename = `${rule.metadata.id || 'rule'}.md`
       const filePath = join(rulesDir, filename)
       writeFileSync(filePath, rule.content, 'utf-8')
     })
@@ -217,8 +213,11 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string): void
 
 export function exportToQodo(rules: RuleBlock[], outputPath: string): void {
   const content = rules
-    .map(rule => rule.content)
-    .join('\n\n')
+    .map(rule => {
+      const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
+      return header + rule.content
+    })
+    .join('\n\n---\n\n')
 
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, content, 'utf-8')
