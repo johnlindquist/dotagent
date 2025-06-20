@@ -58,7 +58,8 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  for (const rule of rules) {
+  let topIndex = 1;
+  rules.forEach(rule => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
     let filePath: string
@@ -71,8 +72,17 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${rule.metadata.id || 'rule'}.md`
-      filePath = join(agentDir, filename)
+      if (rule.metadata.private) {
+        const prefix = String(topIndex).padStart(3, '0') + '-'
+        topIndex++
+        filename = `${prefix}${rule.metadata.id || 'rule'}.md`
+        const privDir = join(agentDir, 'private')
+        mkdirSync(privDir, { recursive: true })
+        filePath = join(privDir, filename)
+      } else {
+        filename = `${rule.metadata.id || 'rule'}.md`
+        filePath = join(agentDir, filename)
+      }
     }
 
     // Prepare front matter data - filter out undefined values
@@ -100,7 +110,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
     // Create Markdown content with frontmatter
     const mdContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdContent, 'utf-8')
-  }
+  })
 }
 
 export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
@@ -248,7 +258,7 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, optio
   writeFileSync(outputPath, content, 'utf-8')
 }
 
-export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options?: ExportOptions): void {
+export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: true }): void {
   // Export to all supported formats
   if (!dryRun) {
     exportToAgent(rules, repoPath, options)

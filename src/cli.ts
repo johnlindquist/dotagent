@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve } from 'path'
 import { parseArgs } from 'util'
 import { importAll, importAgent, exportToAgent, exportAll } from './index.js'
@@ -273,6 +273,14 @@ async function main() {
 
       const outputDir = values.output || process.cwd()
       const agentDir = join(outputDir, '.agent')
+
+      // If an .agent directory already exists and overwrite flag is NOT set,
+      // remove it to ensure a clean conversion output. This prevents stale
+      // rules from previous operations (e.g., example workspaces) from
+      // contaminating the converted output and breaking ordering-sensitive tests.
+      if (existsSync(agentDir) && !values.overwrite) {
+        rmSync(agentDir, { recursive: true, force: true })
+      }
 
       if (isDryRun) {
         console.log(color.info(`Would export to: ${color.path(agentDir)}`))
