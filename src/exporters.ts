@@ -58,7 +58,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  let privateIndex = 0
+  let orderIndex = 1
 
   rules.forEach(rule => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
@@ -73,14 +73,11 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${rule.metadata.id || 'rule'}.md`
+      const prefix = String(orderIndex).padStart(3, '0') + '-'
+      filename = `${prefix}${rule.metadata.id || 'rule'}.md`
       if (rule.metadata.private) {
-        const privDir = join(agentDir, 'private')
-        mkdirSync(privDir, { recursive: true })
-        // add numeric prefix to retain original order among private files
-        const prefix = String(privateIndex + 1).padStart(3, '0') + '-'
-        privateIndex++
-        filePath = join(privDir, prefix + filename)
+        // Write private rules alongside others with .local suffix and numeric prefix
+        filePath = join(agentDir, `${prefix}${rule.metadata.id}.local.md`)
       } else {
         filePath = join(agentDir, filename)
       }
@@ -111,6 +108,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
     // Create Markdown content with frontmatter
     const mdContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdContent, 'utf-8')
+    orderIndex++
   })
 }
 

@@ -222,11 +222,7 @@ export function importAgent(agentDir: string): ImportResult {
     const entries = readdirSync(dir, { withFileTypes: true })
     
     // Ensure deterministic ordering: process directories before files, then sort alphabetically
-    entries.sort((a: Dirent, b: Dirent) => {
-      if (a.isDirectory() && !b.isDirectory()) return -1
-      if (!a.isDirectory() && b.isDirectory()) return 1
-      return a.name.localeCompare(b.name)
-    })
+    entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
@@ -244,7 +240,7 @@ export function importAgent(agentDir: string): ImportResult {
           .replace(/\.md$/, '')
           .replace(/\\/g, '/')
           .split('/')
-          .map((s: string) => s.replace(/^\d{2,}-/, ''))
+          .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
         if (segments[0] === 'private') segments = segments.slice(1)
         const defaultId = segments.join('/')
         
@@ -286,11 +282,7 @@ export function importCursor(rulesDir: string): ImportResult {
     const entries = readdirSync(dir, { withFileTypes: true })
     
     // Ensure deterministic ordering: process directories before files, then sort alphabetically
-    entries.sort((a: Dirent, b: Dirent) => {
-      if (a.isDirectory() && !b.isDirectory()) return -1
-      if (!a.isDirectory() && b.isDirectory()) return 1
-      return a.name.localeCompare(b.name)
-    })
+    entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
@@ -308,7 +300,7 @@ export function importCursor(rulesDir: string): ImportResult {
           .replace(/\.mdc$/, '')
           .replace(/\\/g, '/')
           .split('/')
-          .map((s: string) => s.replace(/^\d{2,}-/, ''))
+          .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
         if (segments[0] === 'private') segments = segments.slice(1)
         const defaultId = segments.join('/')
         
@@ -371,11 +363,7 @@ export function importCline(rulesPath: string): ImportResult {
       const entries = readdirSync(dir, { withFileTypes: true })
       
       // Ensure deterministic ordering: process directories before files, then sort alphabetically
-      entries.sort((a: Dirent, b: Dirent) => {
-        if (a.isDirectory() && !b.isDirectory()) return -1
-        if (!a.isDirectory() && b.isDirectory()) return 1
-        return a.name.localeCompare(b.name)
-      })
+      entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
       
       for (const entry of entries) {
         const fullPath = join(dir, entry.name)
@@ -391,7 +379,7 @@ export function importCline(rulesPath: string): ImportResult {
             .replace(/\.md$/, '')
             .replace(/\\/g, '/')
             .split('/')
-            .map((s: string) => s.replace(/^\d{2,}-/, ''))
+            .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
           if (segments[0] === 'private') segments = segments.slice(1)
           const defaultId = segments.join('/')
           
