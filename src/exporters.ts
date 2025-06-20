@@ -58,6 +58,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
+  let topIndex = 1;
   rules.forEach(rule => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
@@ -71,12 +72,15 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${rule.metadata.id || 'rule'}.md`
       if (rule.metadata.private) {
+        const prefix = String(topIndex).padStart(3, '0') + '-'
+        topIndex++
+        filename = `${prefix}${rule.metadata.id || 'rule'}.md`
         const privDir = join(agentDir, 'private')
         mkdirSync(privDir, { recursive: true })
         filePath = join(privDir, filename)
       } else {
+        filename = `${rule.metadata.id || 'rule'}.md`
         filePath = join(agentDir, filename)
       }
     }
