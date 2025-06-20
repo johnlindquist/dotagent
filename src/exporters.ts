@@ -58,28 +58,22 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  rules.forEach(rule => {
+  rules.forEach((rule, idx) => {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
     let filePath: string
+    const orderPrefix = String(idx + 1).padStart(3, '0') + '-'
     
     if (rule.metadata.id && rule.metadata.id.includes('/')) {
       // Create nested structure based on ID
       const parts = rule.metadata.id.split('/')
-      const fileName = parts.pop() + '.md'
+      const fileName = parts.pop() + '.md' // no prefix for nested structure
       const subDir = join(agentDir, ...parts)
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${rule.metadata.id || 'rule'}.md`
-      // Place private rules in a dedicated subdirectory to preserve original hierarchy
-      if (rule.metadata.private && rule.metadata.id?.startsWith('personal-')) {
-        const privDir = join(agentDir, 'private')
-        mkdirSync(privDir, { recursive: true })
-        filePath = join(privDir, filename)
-      } else {
-        filePath = join(agentDir, filename)
-      }
+      filename = `${orderPrefix}${rule.metadata.id || 'rule'}.md`
+      filePath = join(agentDir, filename)
     }
 
     // Prepare front matter data - filter out undefined values
