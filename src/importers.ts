@@ -222,7 +222,11 @@ export function importAgent(agentDir: string): ImportResult {
     const entries = readdirSync(dir, { withFileTypes: true })
     
     // Ensure deterministic ordering: process directories before files, then sort alphabetically
-    entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1;
+      if (!a.isDirectory() && b.isDirectory()) return 1;
+      return a.name.localeCompare(b.name);
+    })
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
@@ -282,7 +286,11 @@ export function importCursor(rulesDir: string): ImportResult {
     const entries = readdirSync(dir, { withFileTypes: true })
     
     // Ensure deterministic ordering: process directories before files, then sort alphabetically
-    entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1;
+      if (!a.isDirectory() && b.isDirectory()) return 1;
+      return a.name.localeCompare(b.name);
+    })
     
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
@@ -363,7 +371,11 @@ export function importCline(rulesPath: string): ImportResult {
       const entries = readdirSync(dir, { withFileTypes: true })
       
       // Ensure deterministic ordering: process directories before files, then sort alphabetically
-      entries.sort((a: Dirent, b: Dirent) => a.name.localeCompare(b.name))
+      entries.sort((a: Dirent, b: Dirent) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      })
       
       for (const entry of entries) {
         const fullPath = join(dir, entry.name)
