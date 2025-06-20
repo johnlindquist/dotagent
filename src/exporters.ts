@@ -55,25 +55,32 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  for (const rule of rules) {
+  rules.forEach((rule, idx) => {
+    // Determine numeric prefix to preserve original ordering when re-importing
+    const orderPrefix = String(idx + 1).padStart(3, '0')
+
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
     let filename: string
     let filePath: string
-    
+
     if (rule.metadata.id && rule.metadata.id.includes('/')) {
-      // Create nested structure based on ID
+      // For nested IDs, prefix only the final segment to avoid creating directories with numbers
       const parts = rule.metadata.id.split('/')
-      const fileName = parts.pop() + '.md'
+      const last = parts.pop()!
+      const fileName = `${orderPrefix}-${last}.md`
       const subDir = join(agentDir, ...parts)
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      filename = `${rule.metadata.id || 'rule'}.md`
+      filename = `${orderPrefix}-${rule.metadata.id || 'rule'}.md`
       filePath = join(agentDir, filename)
     }
 
     // Prepare front matter data - filter out undefined values
     const frontMatterBase: Record<string, unknown> = {}
+
+    // Always include the rule id so round-trip preserves original identifiers
+    frontMatterBase.id = rule.metadata.id
 
     if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
@@ -95,7 +102,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
     // Create Markdown content with frontmatter
     const mdContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdContent, 'utf-8')
-  }
+  })
 }
 
 export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
@@ -208,6 +215,15 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string): void
   writeFileSync(outputPath, content, 'utf-8')
 }
 
+export function exportToQodo(rules: RuleBlock[], outputPath: string): void {
+  const content = rules
+    .map(rule => rule.content)
+    .join('\n\n')
+
+  ensureDirectoryExists(outputPath)
+  writeFileSync(outputPath, content, 'utf-8')
+}
+
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false): void {
   // Export to all supported formats
   if (!dryRun) {
@@ -220,6 +236,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false):
     exportToCodex(rules, join(repoPath, 'AGENTS.md'))
     exportToAider(rules, join(repoPath, 'CONVENTIONS.md'))
     exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'))
+    exportToQodo(rules, join(repoPath, 'best_practices.md'))
   }
 }
 

@@ -98,6 +98,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for best_practices.md (Qodo)
+  const bestPracticesMd = join(repoPath, 'best_practices.md')
+  if (existsSync(bestPracticesMd)) {
+    try {
+      results.push(importQodo(bestPracticesMd))
+    } catch (e) {
+      errors.push({ file: bestPracticesMd, error: String(e) })
+    }
+  }
+  
   return { results, errors }
 }
 
@@ -142,15 +152,20 @@ export function importAgent(agentDir: string): ImportResult {
         // Keep slashes for nested path structure
         const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
         
+        // Build metadata object, include only keys with defined values
+        const meta: Record<string, unknown> = { ...(data as Record<string, unknown>) }
+        if (meta.id === undefined) {
+          meta.id = defaultId
+        }
+        // Remove keys with undefined values to keep metadata clean
+        Object.keys(meta).forEach(key => {
+          if (meta[key] === undefined) {
+            delete meta[key]
+          }
+        })
+
         rules.push({
-          metadata: {
-            id: data.id || defaultId,
-            description: data.description,
-            alwaysApply: data.alwaysApply,
-            globs: data.globs,
-            manual: data.manual,
-            ...data
-          },
+          metadata: meta as RuleBlock['metadata'],
           content: body.trim()
         })
       }
@@ -348,6 +363,25 @@ export function importClaudeCode(filePath: string): ImportResult {
   
   return {
     format: 'claude',
+    filePath,
+    rules,
+    raw: content
+  }
+}
+
+export function importQodo(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const rules: RuleBlock[] = [{
+    metadata: {
+      id: 'qodo-best-practices',
+      alwaysApply: true,
+      description: 'Qodo best practices and coding standards',
+    },
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'qodo',
     filePath,
     rules,
     raw: content

@@ -14,7 +14,8 @@ export {
   importZed,
   importCodex,
   importAider,
-  importClaudeCode
+  importClaudeCode,
+  importQodo
 } from './importers.js'
 
 export {
@@ -28,6 +29,7 @@ export {
   exportToCodex,
   exportToAider,
   exportToClaudeCode,
+  exportToQodo,
   exportAll
 } from './exporters.js'
 

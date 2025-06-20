@@ -32,12 +32,14 @@ echo ""
 echo "2. Exporting .agent/ directory to all supported formats..."
 echo ""
 
+rm -rf .agentfile
+
 # Export to all formats
 node ../dist/cli.js export .
 
 echo ""
 echo "3. Files created:"
-ls -la .github/copilot-instructions.md .cursor/rules/*.mdc .clinerules .windsurfrules .rules AGENTS.md CONVENTIONS.md 2>/dev/null | grep -v "No such"
+ls -la .github/copilot-instructions.md .cursor/rules/*.mdc .clinerules .windsurfrules .rules AGENTS.md CONVENTIONS.md best_practices.md 2>/dev/null | grep -v "No such"
 
 echo ""
 echo "4. Re-importing all formats back to .agent-reimport/..."

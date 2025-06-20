@@ -30,7 +30,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|qodo)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
 
@@ -94,7 +94,8 @@ async function main() {
           '.windsurfrules',
           '.rules',
           'AGENTS.md',
-          'CLAUDE.md'
+          'CLAUDE.md',
+          'best_practices.md'
         ]))
       } else {
         console.log(color.success(`Found ${color.number(results.length.toString())} rule file(s):`))
@@ -118,7 +119,8 @@ async function main() {
           console.log(color.info(`Would export to: ${color.path(agentDir)}`))
           console.log(color.dim(`Total rules: ${allRules.length}`))
         } else {
-          exportToAgent(allRules, repoPath)
+          const outputDir = values.output || repoPath
+          exportToAgent(allRules, outputDir)
           console.log(color.success(`Created .agent/ directory with ${color.number(allRules.length.toString())} rule(s)`))
         }
       }
@@ -168,7 +170,8 @@ async function main() {
         { path: '.rules', format: 'Zed' },
         { path: 'AGENTS.md', format: 'OpenAI Codex' },
         { path: 'CONVENTIONS.md', format: 'Aider' },
-        { path: 'CLAUDE.md', format: 'Claude Code' }
+        { path: 'CLAUDE.md', format: 'Claude Code' },
+        { path: 'best_practices.md', format: 'Qodo Merge' }
       ]
 
       if (isDryRun) {
@@ -211,9 +214,10 @@ async function main() {
         else if (inputPath.endsWith('AGENTS.md')) format = 'codex'
         else if (inputPath.endsWith('CLAUDE.md')) format = 'claude'
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
+        else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|qodo)'))
           process.exit(1)
         }
       }
@@ -222,7 +226,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importQodo } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -249,6 +253,9 @@ async function main() {
           break
         case 'claude':
           result = importClaudeCode(inputPath)
+          break
+        case 'qodo':
+          result = importQodo(inputPath)
           break
         default:
           console.error(color.error(`Unknown format: ${format}`))
