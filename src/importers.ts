@@ -151,7 +151,6 @@ export function importAgent(agentDir: string): ImportResult {
         // Use relative path without extension as ID if not specified
         // Keep slashes for nested path structure
         const defaultId = relPath.replace(/\.md$/, '').replace(/\\/g, '/')
-
         rules.push({
           metadata: {
             id: data.id || defaultId,

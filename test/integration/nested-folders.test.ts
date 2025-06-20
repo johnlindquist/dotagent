@@ -111,7 +111,7 @@ React component guidelines.`)
     // Export the rules
     exportToAgent(rules, tempDir)
 
-    // Verify the file structure (without numeric prefixes)
+    // Verify the file structure
     const agentDir = join(tempDir, '.agent')
     expect(existsSync(join(agentDir, 'root-config.md'))).toBe(true)
     expect(existsSync(join(agentDir, 'api', 'endpoints.md'))).toBe(true)

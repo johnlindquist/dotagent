@@ -55,28 +55,25 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
 
-  rules.forEach((rule) => {
+  for (const rule of rules) {
     // Support nested folders based on rule ID (e.g., "api/auth" -> "api/auth.md")
+    let filename: string
     let filePath: string
 
     if (rule.metadata.id && rule.metadata.id.includes('/')) {
-      // For nested IDs, create subdirectories
+      // Create nested structure based on ID
       const parts = rule.metadata.id.split('/')
-      const last = parts.pop()!
-      const fileName = `${last}.md`
+      const fileName = parts.pop() + '.md'
       const subDir = join(agentDir, ...parts)
       mkdirSync(subDir, { recursive: true })
       filePath = join(subDir, fileName)
     } else {
-      const filename = `${rule.metadata.id || 'rule'}.md`
+      filename = `${rule.metadata.id || 'rule'}.md`
       filePath = join(agentDir, filename)
     }
 
     // Prepare front matter data - filter out undefined values
     const frontMatterBase: Record<string, unknown> = {}
-
-    // Always include the rule id so round-trip preserves original identifiers
-    frontMatterBase.id = rule.metadata.id
 
     if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
@@ -98,7 +95,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string): void {
     // Create Markdown content with frontmatter
     const mdContent = matter.stringify(rule.content, frontMatter)
     writeFileSync(filePath, mdContent, 'utf-8')
-  })
+  }
 }
 
 export function exportToCursor(rules: RuleBlock[], outputDir: string): void {
@@ -152,8 +149,8 @@ export function exportToCline(rules: RuleBlock[], outputPath: string): void {
     const rulesDir = join(outputPath, '.clinerules')
     mkdirSync(rulesDir, { recursive: true })
 
-    rules.forEach((rule) => {
-      const filename = `${rule.metadata.id || 'rule'}.md`
+    rules.forEach((rule, index) => {
+      const filename = `${String(index + 1).padStart(2, '0')}-${rule.metadata.id || 'rule'}.md`
       const filePath = join(rulesDir, filename)
       writeFileSync(filePath, rule.content, 'utf-8')
     })
