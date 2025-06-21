@@ -65,7 +65,6 @@
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3",
-    "@types/mdast": "^4.0.4",
-    "@types/gray-matter": "0.0.4"
+    "@types/mdast": "^4.0.4"
   }
 }
