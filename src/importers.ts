@@ -154,6 +154,15 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for GEMINI.md (Gemini CLI)
+  const geminiMd = join(repoPath, 'GEMINI.md')
+  if (existsSync(geminiMd)) {
+    try {
+      results.push(importGemini(geminiMd))
+    } catch (e) {
+      errors.push({ file: geminiMd, error: String(e) })
+    }
+  }
 
   // Check for best_practices.md (Qodo)
   const bestPracticesMd = join(repoPath, 'best_practices.md')
@@ -172,6 +181,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       results.push(importClaudeCode(claudeLocalMd))
     } catch (e) {
       errors.push({ file: claudeLocalMd, error: String(e) })
+    }
+  }
+  
+  // Check for local GEMINI.md
+  const geminiLocalMd = join(repoPath, 'GEMINI.local.md')
+  if (existsSync(geminiLocalMd)) {
+    try {
+      results.push(importGemini(geminiLocalMd))
+    } catch (e) {
+      errors.push({ file: geminiLocalMd, error: String(e) })
     }
   }
   
@@ -583,6 +602,33 @@ export function importClaudeCode(filePath: string): ImportResult {
   
   return {
     format: 'claude',
+    filePath,
+    rules,
+    raw: content
+  }
+}
+
+export function importGemini(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'gemini-instructions',
+    alwaysApply: true,
+    description: 'Gemini CLI context and instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
+  const rules: RuleBlock[] = [{
+    metadata,
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'gemini',
     filePath,
     rules,
     raw: content

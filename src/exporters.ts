@@ -258,6 +258,21 @@ export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, optio
   writeFileSync(outputPath, content, 'utf-8')
 }
 
+export function exportToGemini(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const content = filteredRules
+    .map(rule => {
+      const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
+      return header + rule.content
+    })
+    .join('\n\n')
+
+  ensureDirectoryExists(outputPath)
+  writeFileSync(outputPath, content, 'utf-8')
+}
+
 export function exportToQodo(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -285,6 +300,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToCodex(rules, join(repoPath, 'AGENTS.md'), options)
     exportToAider(rules, join(repoPath, 'CONVENTIONS.md'), options)
     exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
+    exportToGemini(rules, join(repoPath, 'GEMINI.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)
   }
 }
