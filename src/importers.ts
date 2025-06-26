@@ -310,13 +310,13 @@ export function importCursor(rulesDir: string): ImportResult {
       if (entry.isDirectory()) {
         // Recursively search subdirectories
         findMdcFiles(fullPath, relPath)
-      } else if (entry.isFile() && entry.name.endsWith('.mdc')) {
+      } else if (entry.isFile() && (entry.name.endsWith('.mdc') || entry.name.endsWith('.md'))) {
         const content = readFileSync(fullPath, 'utf-8')
         const { data, content: body } = matter(content)
         
         // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
         let segments = relPath
-          .replace(/\.mdc$/, '')
+          .replace(/\.(mdc|md)$/, '')
           .replace(/\\/g, '/')
           .split('/')
           .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))

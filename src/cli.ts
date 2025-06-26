@@ -91,7 +91,7 @@ async function main() {
         console.log(formatList([
           '.agent/**/*.md',
           '.github/copilot-instructions.md',
-          '.cursor/rules/*.mdc',
+          '.cursor/rules/*.{mdc,md}',
           '.clinerules',
           '.windsurfrules',
           '.rules',
@@ -314,7 +314,7 @@ function updateGitignore(repoPath: string): void {
     '.agent/**/*.local.md',
     '.agent/private/**',
     '.github/copilot-instructions.local.md',
-    '.cursor/rules/**/*.local.mdc',
+    '.cursor/rules/**/*.local.{mdc,md}',
     '.cursor/rules-private/**',
     '.clinerules.local',
     '.clinerules/private/**',
