@@ -21,7 +21,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Agent (dotagent) | `.agent/**/*.md` | Markdown with YAML frontmatter |
 | Claude Code | `CLAUDE.md` | Plain Markdown |
 | VS Code (Copilot) | `.github/copilot-instructions.md` | Plain Markdown |
-| Cursor | `.cursor/rules/*.mdc`, `.cursor/rules/*.md` | Markdown with YAML frontmatter |
+| Cursor | `.cursor/**/*.mdc`, `.cursor/**/*.md` | Markdown with YAML frontmatter |
 | Cline | `.clinerules` or `.clinerules/*.md` | Plain Markdown |
 | Windsurf | `.windsurfrules` | Plain Markdown |
 | Zed | `.rules` | Plain Markdown |

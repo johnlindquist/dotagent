@@ -91,7 +91,7 @@ async function main() {
         console.log(formatList([
           '.agent/**/*.md',
           '.github/copilot-instructions.md',
-          '.cursor/rules/*.{mdc,md}',
+          '.cursor/**/*.{mdc,md}',
           '.clinerules',
           '.windsurfrules',
           '.rules',

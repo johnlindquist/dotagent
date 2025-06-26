@@ -185,20 +185,20 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
       }
     }
 
-    // Prepare front matter data - filter out undefined values
+    // Prepare front matter data - filter out undefined and null values
     const frontMatterBase: Record<string, unknown> = {}
 
-    if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
-    if (rule.metadata.globs !== undefined) frontMatterBase.globs = rule.metadata.globs
-    if (rule.metadata.manual !== undefined) frontMatterBase.manual = rule.metadata.manual
-    if (rule.metadata.scope !== undefined) frontMatterBase.scope = rule.metadata.scope
-    if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
-    if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
+    if (rule.metadata.globs !== undefined && rule.metadata.globs !== null) frontMatterBase.globs = rule.metadata.globs
+    if (rule.metadata.manual !== undefined && rule.metadata.manual !== null) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.priority !== undefined && rule.metadata.priority !== null) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined && rule.metadata.triggers !== null) frontMatterBase.triggers = rule.metadata.triggers
 
-    // Add other metadata fields but exclude 'private' if it's false
+    // Add other metadata fields but exclude 'private' if it's false or null
     for (const [key, value] of Object.entries(rule.metadata)) {
-      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
+      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
         // Don't include private: false in frontmatter
         if (key === 'private' && value === false) continue
         frontMatterBase[key] = value
@@ -236,20 +236,20 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: 
       filePath = join(rulesDir, filename)
     }
 
-    // Prepare front matter data - filter out undefined values
+    // Prepare front matter data - filter out undefined and null values
     const frontMatterBase: Record<string, unknown> = {}
 
-    if (rule.metadata.description !== undefined) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
-    if (rule.metadata.globs !== undefined) frontMatterBase.globs = rule.metadata.globs
-    if (rule.metadata.manual !== undefined) frontMatterBase.manual = rule.metadata.manual
-    if (rule.metadata.scope !== undefined) frontMatterBase.scope = rule.metadata.scope
-    if (rule.metadata.priority !== undefined) frontMatterBase.priority = rule.metadata.priority
-    if (rule.metadata.triggers !== undefined) frontMatterBase.triggers = rule.metadata.triggers
+    if (rule.metadata.globs !== undefined && rule.metadata.globs !== null) frontMatterBase.globs = rule.metadata.globs
+    if (rule.metadata.manual !== undefined && rule.metadata.manual !== null) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.priority !== undefined && rule.metadata.priority !== null) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined && rule.metadata.triggers !== null) frontMatterBase.triggers = rule.metadata.triggers
 
-    // Add other metadata fields but exclude 'private' if it's false
+    // Add other metadata fields but exclude 'private' if it's false or null
     for (const [key, value] of Object.entries(rule.metadata)) {
-      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined) {
+      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
         // Don't include private: false in frontmatter
         if (key === 'private' && value === false) continue
         frontMatterBase[key] = value
