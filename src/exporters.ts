@@ -3,6 +3,7 @@ import { join, dirname, relative } from 'path'
 import yaml from 'js-yaml'
 import matter from 'gray-matter'
 import type { RuleBlock, ExportOptions } from './types.js'
+import { grayMatterOptions } from './yaml-parser.js'
 
 /**
  * Generate conditional rules section for single-file formats
@@ -207,7 +208,7 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
     const frontMatter = frontMatterBase
 
     // Create Markdown content with frontmatter
-    const mdContent = matter.stringify(rule.content, frontMatter)
+    const mdContent = matter.stringify(rule.content, frontMatter, grayMatterOptions)
     writeFileSync(filePath, mdContent, 'utf-8')
   })
 }
@@ -258,7 +259,7 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: 
     const frontMatter = frontMatterBase
 
     // Create MDC content
-    const mdcContent = matter.stringify(rule.content, frontMatter)
+    const mdcContent = matter.stringify(rule.content, frontMatter, grayMatterOptions)
     writeFileSync(filePath, mdcContent, 'utf-8')
   }
 }

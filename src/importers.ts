@@ -3,6 +3,7 @@ import { join, basename } from 'path'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
+import { grayMatterOptions } from './yaml-parser.js'
 
 // Helper function to detect if a file/path indicates a private rule
 function isPrivateRule(filePath: string): boolean {
@@ -248,7 +249,7 @@ export function importAgent(agentDir: string): ImportResult {
         findMarkdownFiles(fullPath, relPath)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         const content = readFileSync(fullPath, 'utf-8')
-        const { data, content: body } = matter(content)
+        const { data, content: body } = matter(content, grayMatterOptions)
         
         // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
         let segments = relPath
@@ -312,7 +313,7 @@ export function importCursor(rulesDir: string): ImportResult {
         findMdcFiles(fullPath, relPath)
       } else if (entry.isFile() && (entry.name.endsWith('.mdc') || entry.name.endsWith('.md'))) {
         const content = readFileSync(fullPath, 'utf-8')
-        const { data, content: body } = matter(content)
+        const { data, content: body } = matter(content, grayMatterOptions)
         
         // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
         let segments = relPath
