@@ -1,8 +1,98 @@
 import { writeFileSync, mkdirSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join, dirname, relative } from 'path'
 import yaml from 'js-yaml'
 import matter from 'gray-matter'
 import type { RuleBlock, ExportOptions } from './types.js'
+
+/**
+ * Generate conditional rules section for single-file formats
+ */
+function generateConditionalRulesSection(rules: RuleBlock[], repoPath: string): string {
+  const sections: string[] = []
+  
+  // Separate rules by type
+  const alwaysApplyRules = rules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalRules = rules.filter(r => r.metadata.alwaysApply === false)
+  
+  if (conditionalRules.length === 0) {
+    return ''
+  }
+  
+  // Group rules by folder (e.g., workflows, components, etc.)
+  const rulesByFolder: Record<string, RuleBlock[]> = {}
+  const rulesWithScope: RuleBlock[] = []
+  const rulesWithDescription: RuleBlock[] = []
+  
+  conditionalRules.forEach(rule => {
+    // Extract folder from ID if it contains a slash
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      const folder = rule.metadata.id.split('/')[0]
+      if (!rulesByFolder[folder]) {
+        rulesByFolder[folder] = []
+      }
+      rulesByFolder[folder].push(rule)
+    }
+    
+    // Categorize by scope/description
+    if (rule.metadata.scope) {
+      rulesWithScope.push(rule)
+    } else if (rule.metadata.description && !rule.metadata.scope && !rule.metadata.id?.includes('/')) {
+      // Only treat as description-based if it's not in a folder
+      rulesWithDescription.push(rule)
+    }
+  })
+  
+  sections.push('## Context-Specific Rules')
+  sections.push('')
+  
+  // Add rules with scope patterns
+  if (rulesWithScope.length > 0) {
+    rulesWithScope.forEach(rule => {
+      const scopes = Array.isArray(rule.metadata.scope) ? rule.metadata.scope : [rule.metadata.scope]
+      scopes.forEach(scope => {
+        const rulePath = `.agent/${rule.metadata.id}.md`
+        const description = rule.metadata.description ? ` - ${rule.metadata.description}` : ''
+        sections.push(`When working with files matching \`${scope}\`, also apply:`)
+        sections.push(`→ [${rule.metadata.id}](${rulePath})${description}`)
+        sections.push('')
+      })
+    })
+  }
+  
+  // Add rules with description keywords
+  if (rulesWithDescription.length > 0) {
+    rulesWithDescription.forEach(rule => {
+      const rulePath = `.agent/${rule.metadata.id}.md`
+      sections.push(`When working with ${rule.metadata.description}, also apply:`)
+      sections.push(`→ [${rule.metadata.id}](${rulePath})`)
+      sections.push('')
+    })
+  }
+  
+  // Add folder-based sections (e.g., Workflows)
+  Object.entries(rulesByFolder).forEach(([folder, folderRules]) => {
+    // Skip if already handled above
+    const unhandledRules = folderRules.filter(r => 
+      !rulesWithScope.includes(r) && !rulesWithDescription.includes(r)
+    )
+    
+    if (unhandledRules.length > 0) {
+      // Capitalize folder name for section title
+      const sectionTitle = folder.charAt(0).toUpperCase() + folder.slice(1)
+      sections.push(`## ${sectionTitle}`)
+      sections.push('')
+      
+      unhandledRules.forEach(rule => {
+        const rulePath = `.agent/${rule.metadata.id}.md`
+        const description = rule.metadata.description ? ` - ${rule.metadata.description}` : ''
+        sections.push(`→ [${rule.metadata.id}](${rulePath})${description}`)
+      })
+      sections.push('')
+    }
+  })
+  
+  return sections.join('\n')
+}
 
 /**
  * @deprecated Use exportToAgent() instead. Single-file .agentconfig format is deprecated.
@@ -45,13 +135,22 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string, options?
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  // Combine all rules into a single markdown document
-  const content = filteredRules
+  // Separate always-apply rules from conditional rules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  // Combine always-apply rules into main content
+  const mainContent = alwaysApplyRules
     .map(rule => rule.content)
     .join('\n\n---\n\n')
+  
+  // Add conditional rules section if there are any
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n---\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
@@ -170,15 +269,22 @@ export function exportToCline(rules: RuleBlock[], outputPath: string, options?: 
   
   if (outputPath.endsWith('.clinerules')) {
     // Single file mode
-    const content = filteredRules
+    const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+    const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+    
+    const mainContent = alwaysApplyRules
       .map(rule => {
         const header = rule.metadata.description ? `## ${rule.metadata.description}\n\n` : ''
         return header + rule.content
       })
       .join('\n\n')
+    
+    const fullContent = conditionalSection 
+      ? `${mainContent}\n\n${conditionalSection}`
+      : mainContent
 
     ensureDirectoryExists(outputPath)
-    writeFileSync(outputPath, content, 'utf-8')
+    writeFileSync(outputPath, fullContent, 'utf-8')
   } else {
     // Directory mode
     const rulesDir = join(outputPath, '.clinerules')
@@ -196,81 +302,123 @@ export function exportToWindsurf(rules: RuleBlock[], outputPath: string, options
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => rule.content)
     .join('\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToZed(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => rule.content)
     .join('\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => {
       const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
       return header + rule.content
     })
     .join('\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToAider(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => rule.content)
     .join('\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => {
       const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
       return header + rule.content
     })
     .join('\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportToQodo(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
-  const content = filteredRules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
     .map(rule => {
       const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
       return header + rule.content
     })
     .join('\n\n---\n\n')
+  
+  const fullContent = conditionalSection 
+    ? `${mainContent}\n\n---\n\n${conditionalSection}`
+    : mainContent
 
   ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, content, 'utf-8')
+  writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: false }): void {
