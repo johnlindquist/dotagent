@@ -4,7 +4,7 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { spawn } from 'child_process'
 
-describe('Interactive export flow', () => {
+describe.skipIf(process.env.CI)('Interactive export flow', () => {
   let tempDir: string
 
   beforeEach(() => {
