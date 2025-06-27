@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToQodo } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -33,7 +33,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|qodo)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
 
@@ -98,6 +98,7 @@ async function main() {
           '.rules',
           'AGENTS.md',
           'CLAUDE.md',
+          'GEMINI.md',
           'best_practices.md'
         ]))
       } else {
@@ -181,6 +182,7 @@ async function main() {
         { name: 'OpenAI Codex (AGENTS.md)', value: 'codex' },
         { name: 'Aider (CONVENTIONS.md)', value: 'aider' },
         { name: 'Claude Code (CLAUDE.md)', value: 'claude' },
+        { name: 'Gemini CLI (GEMINI.md)', value: 'gemini' },
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' }
       ]
 
@@ -208,6 +210,7 @@ async function main() {
           'AGENTS.md',
           'CONVENTIONS.md',
           'CLAUDE.md',
+          'GEMINI.md',
           'best_practices.md'
         )
       } else {
@@ -254,6 +257,11 @@ async function main() {
             exportPath = join(outputDir, 'CLAUDE.md')
             if (!isDryRun) exportToClaudeCode(rules, exportPath, options)
             exportedPaths.push('CLAUDE.md')
+            break
+          case 'gemini':
+            exportPath = join(outputDir, 'GEMINI.md')
+            if (!isDryRun) exportToGemini(rules, exportPath, options)
+            exportedPaths.push('GEMINI.md')
             break
           case 'qodo':
             exportPath = join(outputDir, 'best_practices.md')
@@ -308,11 +316,12 @@ async function main() {
         else if (inputPath.endsWith('.rules')) format = 'zed'
         else if (inputPath.endsWith('AGENTS.md')) format = 'codex'
         else if (inputPath.endsWith('CLAUDE.md')) format = 'claude'
+        else if (inputPath.endsWith('GEMINI.md')) format = 'gemini'
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|qodo)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo)'))
           process.exit(1)
         }
       }
@@ -321,7 +330,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importQodo } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -348,6 +357,9 @@ async function main() {
           break
         case 'claude':
           result = importClaudeCode(inputPath)
+          break
+        case 'gemini':
+          result = importGemini(inputPath)
           break
         case 'qodo':
           result = importQodo(inputPath)
@@ -428,7 +440,8 @@ function updateGitignore(repoPath: string): void {
     '.rules.local',
     'AGENTS.local.md',
     'CONVENTIONS.local.md',
-    'CLAUDE.local.md'
+    'CLAUDE.local.md',
+    'GEMINI.local.md'
   ].join('\n')
   
   if (existsSync(gitignorePath)) {
