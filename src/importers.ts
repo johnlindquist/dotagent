@@ -287,6 +287,11 @@ export function importAgent(agentDir: string): ImportResult {
           ...data
         }
         
+        // Set default alwaysApply to false if not specified
+        if (metadata.alwaysApply === undefined) {
+          metadata.alwaysApply = false
+        }
+        
         // Only set private if it's true (from file pattern or frontmatter)
         if (data.private === true || (data.private === undefined && isPrivateFile)) {
           metadata.private = true
@@ -354,6 +359,11 @@ export function importCursor(cursorDir: string): ImportResult {
         const metadata: any = {
           id: data.id || defaultId,
           ...data
+        }
+        
+        // Set default alwaysApply to false if not specified
+        if (metadata.alwaysApply === undefined) {
+          metadata.alwaysApply = false
         }
         
         // Only set private if it's true (from file pattern or frontmatter)
