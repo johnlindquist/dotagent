@@ -50,6 +50,7 @@
   },
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
+    "@inquirer/prompts": "^7.5.3",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
     "mdast": "^3.0.0",
@@ -59,12 +60,12 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^24.0.3",
     "@types/tmp": "^0.2.6",
     "execa": "^9.6.0",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.3",
-    "@types/mdast": "^4.0.4"
+    "vitest": "^3.2.3"
   }
 }

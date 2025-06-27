@@ -68,13 +68,10 @@ async function main() {
 
   switch (command) {
     case 'import': {
-      if (!target) {
-        console.error(color.error('Repository path required'))
-        console.error(color.dim('Hint: Use "." for current directory'))
-        process.exit(1)
-      }
+      // Default to current directory if no target specified
+      const importTarget = target || '.'
 
-      const repoPath = resolve(target)
+      const repoPath = resolve(importTarget)
       if (!existsSync(repoPath)) {
         console.error(color.error(`Path does not exist: ${color.path(repoPath)}`))
         console.error(color.dim('Hint: Check if the path is correct or use "." for current directory'))
