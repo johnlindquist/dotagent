@@ -7,7 +7,7 @@ import type { GrayMatterOption } from 'gray-matter'
  */
 export function createSafeYamlParser() {
   return {
-    parse: (str: string) => {
+    parse: (str: string): object => {
       // Pre-process the YAML string to quote glob patterns
       // This regex looks for unquoted strings starting with * in YAML values
       const processedStr = str.replace(
@@ -36,20 +36,20 @@ export function createSafeYamlParser() {
       )
       
       try {
-        return yaml.load(fullyProcessedStr)
+        return yaml.load(fullyProcessedStr) as object
       } catch (error) {
         // If preprocessing fails, try the original string
-        return yaml.load(str)
+        return yaml.load(str) as object
       }
     },
-    stringify: yaml.dump.bind(yaml)
+    stringify: (data: object) => yaml.dump(data)
   }
 }
 
 /**
  * Gray-matter options with custom YAML parser for handling glob patterns
  */
-export const grayMatterOptions: GrayMatterOption = {
+export const grayMatterOptions: GrayMatterOption<string, object> = {
   engines: {
     yaml: createSafeYamlParser()
   }
