@@ -27,6 +27,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Zed | `.rules` | Plain Markdown |
 | OpenAI Codex | `AGENTS.md` | Plain Markdown |
 | Aider | `CONVENTIONS.md` | Plain Markdown |
+| Gemini | `GEMINI.md` | Plain Markdown |
 | Qodo | `best_practices.md` | Plain Markdown |
 
 ## Installation
@@ -181,6 +182,7 @@ Confidential requirements
 | Windsurf | `.windsurfrules` | `.windsurfrules.local` |
 | Zed | `.rules` | `.rules.local` |
 | Claude | `CLAUDE.md` | `CLAUDE.local.md` |
+| Gemini | `GEMINI.md` | `GEMINI.local.md` |
 
 ### CLI Options
 
@@ -210,6 +212,7 @@ When you run `dotagent export`, it automatically updates your `.gitignore` with 
 AGENTS.local.md
 CONVENTIONS.local.md
 CLAUDE.local.md
+GEMINI.local.md
 ```
 
 ## Programmatic Usage
@@ -272,6 +275,7 @@ interface RuleMetadata {
 - `importWindsurf(filePath: string): ImportResult` - Import Windsurf rules
 - `importZed(filePath: string): ImportResult` - Import Zed rules
 - `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
+- `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
 - `importQodo(filePath: string): ImportResult` - Import Qodo best practices
 
 ### Export Functions
@@ -284,7 +288,8 @@ interface RuleMetadata {
 - `exportToWindsurf(rules: RuleBlock[], outputPath: string): void`
 - `exportToZed(rules: RuleBlock[], outputPath: string): void`
 - `exportToCodex(rules: RuleBlock[], outputPath: string): void`
-- `exportToQodo(rules: RuleBlock[], outputPath: string): void` - Export to Qodo best practices
+- `exportToGemini(rules: RuleBlock[], outputPath: string): void`
+- `exportToQodo(rules: RuleBlock[], outputPath: string): void`
 
 ## Development
 
