@@ -22,7 +22,13 @@
       "Bash(npm test:*)",
       "Bash(gh pr merge:*)",
       "Bash(git fetch:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(rg:*)",
+      "Bash(git pull:*)",
+      "Bash(npm docs:*)",
+      "Bash(cat:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }

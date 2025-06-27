@@ -3,8 +3,9 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToQodo } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
+import { select, confirm } from './utils/prompt.js'
 
 const { values, positionals } = parseArgs({
   args: process.argv.slice(2),
@@ -170,37 +171,115 @@ async function main() {
 
       const outputDir = values.output || repoPath
       
-      const exportTargets = [
-        { path: '.github/copilot-instructions.md', format: 'VS Code Copilot' },
-        { path: '.cursor/rules/', format: 'Cursor' },
-        { path: '.clinerules', format: 'Cline' },
-        { path: '.windsurfrules', format: 'Windsurf' },
-        { path: '.rules', format: 'Zed' },
-        { path: 'AGENTS.md', format: 'OpenAI Codex' },
-        { path: 'CONVENTIONS.md', format: 'Aider' },
-        { path: 'CLAUDE.md', format: 'Claude Code' },
-        { path: 'best_practices.md', format: 'Qodo Merge' }
+      const exportFormats = [
+        { name: 'All formats', value: 'all' },
+        { name: 'VS Code Copilot (.github/copilot-instructions.md)', value: 'copilot' },
+        { name: 'Cursor (.cursor/rules/)', value: 'cursor' },
+        { name: 'Cline (.clinerules)', value: 'cline' },
+        { name: 'Windsurf (.windsurfrules)', value: 'windsurf' },
+        { name: 'Zed (.rules)', value: 'zed' },
+        { name: 'OpenAI Codex (AGENTS.md)', value: 'codex' },
+        { name: 'Aider (CONVENTIONS.md)', value: 'aider' },
+        { name: 'Claude Code (CLAUDE.md)', value: 'claude' },
+        { name: 'Qodo Merge (best_practices.md)', value: 'qodo' }
       ]
 
+      console.log()
+      const selectedFormat = await select('Select export format:', exportFormats, 0)
+      
       if (isDryRun) {
-        console.log(color.info('Would export to:'))
-        for (const target of exportTargets) {
-          console.log(`  ${color.format(target.format)}: ${color.path(join(outputDir, target.path))}`)
+        console.log(color.info('Dry run mode - no files will be written'))
+      }
+      
+      const options = { includePrivate: values['include-private'] }
+      const exportedPaths: string[] = []
+      
+      if (selectedFormat === 'all') {
+        if (!isDryRun) {
+          exportAll(rules, outputDir, false, options)
         }
+        console.log(color.success('Exported to all formats'))
+        exportedPaths.push(
+          '.github/copilot-instructions.md',
+          '.cursor/rules/',
+          '.clinerules',
+          '.windsurfrules',
+          '.rules',
+          'AGENTS.md',
+          'CONVENTIONS.md',
+          'CLAUDE.md',
+          'best_practices.md'
+        )
       } else {
-        const options = { includePrivate: values['include-private'] }
-        exportAll(rules, outputDir, isDryRun)
-        console.log(color.success('Exported to:'))
-        for (const target of exportTargets) {
-          console.log(`  ${color.format(target.format)}: ${color.path(join(outputDir, target.path))}`)
+        // Export to specific format
+        let exportPath = ''
+        
+        switch (selectedFormat) {
+          case 'copilot':
+            exportPath = join(outputDir, '.github', 'copilot-instructions.md')
+            if (!isDryRun) exportToCopilot(rules, exportPath, options)
+            exportedPaths.push('.github/copilot-instructions.md')
+            break
+          case 'cursor':
+            if (!isDryRun) exportToCursor(rules, outputDir, options)
+            exportPath = join(outputDir, '.cursor/rules/')
+            exportedPaths.push('.cursor/rules/')
+            break
+          case 'cline':
+            exportPath = join(outputDir, '.clinerules')
+            if (!isDryRun) exportToCline(rules, exportPath, options)
+            exportedPaths.push('.clinerules')
+            break
+          case 'windsurf':
+            exportPath = join(outputDir, '.windsurfrules')
+            if (!isDryRun) exportToWindsurf(rules, exportPath, options)
+            exportedPaths.push('.windsurfrules')
+            break
+          case 'zed':
+            exportPath = join(outputDir, '.rules')
+            if (!isDryRun) exportToZed(rules, exportPath, options)
+            exportedPaths.push('.rules')
+            break
+          case 'codex':
+            exportPath = join(outputDir, 'AGENTS.md')
+            if (!isDryRun) exportToCodex(rules, exportPath, options)
+            exportedPaths.push('AGENTS.md')
+            break
+          case 'aider':
+            exportPath = join(outputDir, 'CONVENTIONS.md')
+            if (!isDryRun) exportToAider(rules, exportPath, options)
+            exportedPaths.push('CONVENTIONS.md')
+            break
+          case 'claude':
+            exportPath = join(outputDir, 'CLAUDE.md')
+            if (!isDryRun) exportToClaudeCode(rules, exportPath, options)
+            exportedPaths.push('CLAUDE.md')
+            break
+          case 'qodo':
+            exportPath = join(outputDir, 'best_practices.md')
+            if (!isDryRun) exportToQodo(rules, exportPath, options)
+            exportedPaths.push('best_practices.md')
+            break
         }
         
-        if (!values['include-private'] && privateRuleCount > 0) {
-          console.log(color.dim(`\nExcluded ${privateRuleCount} private rule(s). Use --include-private to include them.`))
+        if (exportPath) {
+          console.log(color.success(`Exported to: ${color.path(exportPath)}`))
         }
+      }
+      
+      if (!values['include-private'] && privateRuleCount > 0) {
+        console.log(color.dim(`\nExcluded ${privateRuleCount} private rule(s). Use --include-private to include them.`))
+      }
+      
+      // Ask about gitignore
+      if (!isDryRun && exportedPaths.length > 0) {
+        console.log()
+        const shouldUpdateGitignore = await confirm('Add exported files to .gitignore?', true)
         
-        // Update .gitignore with private patterns
-        updateGitignore(outputDir)
+        if (shouldUpdateGitignore) {
+          updateGitignoreWithPaths(outputDir, exportedPaths)
+          console.log(color.success('Updated .gitignore'))
+        }
       }
       break
     }
@@ -304,6 +383,33 @@ async function main() {
       console.error(color.error(`Unknown command: ${command}`))
       showHelp()
       process.exit(1)
+  }
+}
+
+function updateGitignoreWithPaths(repoPath: string, paths: string[]): void {
+  const gitignorePath = join(repoPath, '.gitignore')
+  
+  const patterns = [
+    '',
+    '# Added by dotagent: ignore exported AI rule files',
+    ...paths.map(p => p.endsWith('/') ? p + '**' : p),
+    ''
+  ].join('\n')
+  
+  if (existsSync(gitignorePath)) {
+    const content = readFileSync(gitignorePath, 'utf-8')
+    
+    // Check if any of the patterns already exist
+    const newPatterns = paths.filter(p => {
+      const pattern = p.endsWith('/') ? p + '**' : p
+      return !content.includes(pattern)
+    })
+    
+    if (newPatterns.length > 0) {
+      appendFileSync(gitignorePath, patterns)
+    }
+  } else {
+    writeFileSync(gitignorePath, patterns.trim() + '\n')
   }
 }
 
