@@ -1,6 +1,6 @@
 # dotagent
 
-Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, and more.
+Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, Amazon Q Developer, and more.
 
 ## Features
 
@@ -28,6 +28,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | OpenAI Codex | `AGENTS.md` | Plain Markdown |
 | Aider | `CONVENTIONS.md` | Plain Markdown |
 | Qodo | `best_practices.md` | Plain Markdown |
+| Amazon Q Developer | `.amazonq/rules/*.md` | Plain Markdown |
 
 ## Installation
 
@@ -273,6 +274,7 @@ interface RuleMetadata {
 - `importZed(filePath: string): ImportResult` - Import Zed rules
 - `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
 - `importQodo(filePath: string): ImportResult` - Import Qodo best practices
+- `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
 
 ### Export Functions
 
@@ -285,6 +287,7 @@ interface RuleMetadata {
 - `exportToZed(rules: RuleBlock[], outputPath: string): void`
 - `exportToCodex(rules: RuleBlock[], outputPath: string): void`
 - `exportToQodo(rules: RuleBlock[], outputPath: string): void` - Export to Qodo best practices
+- `exportToAmazonQ(rules: RuleBlock[], outputDir: string): void` - Export to Amazon Q Developer format
 
 ## Development
 

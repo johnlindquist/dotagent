@@ -16,7 +16,8 @@ export {
   importAider,
   importClaudeCode,
   importGemini,
-  importQodo
+  importQodo,
+  importAmazonQ
 } from './importers.js'
 
 export {
@@ -32,6 +33,7 @@ export {
   exportToClaudeCode,
   exportToGemini,
   exportToQodo,
+  exportToAmazonQ,
   exportAll
 } from './exporters.js'
 
