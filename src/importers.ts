@@ -3,6 +3,7 @@ import { join, basename } from 'path'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
+import { grayMatterOptions } from './yaml-parser.js'
 
 // Helper function to detect if a file/path indicates a private rule
 function isPrivateRule(filePath: string): boolean {
@@ -44,13 +45,13 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
-  // Check for Cursor rules
-  const cursorRulesDir = join(repoPath, '.cursor', 'rules')
-  if (existsSync(cursorRulesDir)) {
+  // Check for Cursor directory (.cursor/)
+  const cursorDir = join(repoPath, '.cursor')
+  if (existsSync(cursorDir)) {
     try {
-      results.push(importCursor(cursorRulesDir))
+      results.push(importCursor(cursorDir))
     } catch (e) {
-      errors.push({ file: cursorRulesDir, error: String(e) })
+      errors.push({ file: cursorDir, error: String(e) })
     }
   }
   
@@ -277,7 +278,7 @@ export function importAgent(agentDir: string): ImportResult {
         findMarkdownFiles(fullPath, relPath)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         const content = readFileSync(fullPath, 'utf-8')
-        const { data, content: body } = matter(content)
+        const { data, content: body } = matter(content, grayMatterOptions)
         
         // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
         let segments = relPath
@@ -294,6 +295,11 @@ export function importAgent(agentDir: string): ImportResult {
         const metadata: any = {
           id: data.id || defaultId,
           ...data
+        }
+        
+        // Set default alwaysApply to false if not specified
+        if (metadata.alwaysApply === undefined) {
+          metadata.alwaysApply = false
         }
         
         // Only set private if it's true (from file pattern or frontmatter)
@@ -318,11 +324,11 @@ export function importAgent(agentDir: string): ImportResult {
   }
 }
 
-export function importCursor(rulesDir: string): ImportResult {
+export function importCursor(cursorDir: string): ImportResult {
   const rules: RuleBlock[] = []
   
-  // Recursively find all .mdc files
-  function findMdcFiles(dir: string, relativePath = ''): void {
+  // Recursively find all .mdc and .md files in the .cursor directory
+  function findCursorFiles(dir: string, relativePath = ''): void {
     const entries = readdirSync(dir, { withFileTypes: true })
     
     // Ensure deterministic ordering: process directories before files, then sort alphabetically
@@ -338,18 +344,23 @@ export function importCursor(rulesDir: string): ImportResult {
       
       if (entry.isDirectory()) {
         // Recursively search subdirectories
-        findMdcFiles(fullPath, relPath)
-      } else if (entry.isFile() && entry.name.endsWith('.mdc')) {
+        findCursorFiles(fullPath, relPath)
+      } else if (entry.isFile() && (entry.name.endsWith('.mdc') || entry.name.endsWith('.md'))) {
         const content = readFileSync(fullPath, 'utf-8')
-        const { data, content: body } = matter(content)
+        const { data, content: body } = matter(content, grayMatterOptions)
         
         // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
         let segments = relPath
-          .replace(/\.mdc$/, '')
+          .replace(/\.(mdc|md)$/, '')
           .replace(/\\/g, '/')
           .split('/')
           .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
+        
+        // Special handling for backward compatibility
         if (segments[0] === 'private') segments = segments.slice(1)
+        // If the file is directly in the 'rules' directory, don't include 'rules' in the ID
+        if (segments[0] === 'rules' && segments.length === 2) segments = segments.slice(1)
+        
         const defaultId = segments.join('/')
         
         // Check if this is a private rule
@@ -358,6 +369,11 @@ export function importCursor(rulesDir: string): ImportResult {
         const metadata: any = {
           id: data.id || defaultId,
           ...data
+        }
+        
+        // Set default alwaysApply to false if not specified
+        if (metadata.alwaysApply === undefined) {
+          metadata.alwaysApply = false
         }
         
         // Only set private if it's true (from file pattern or frontmatter)
@@ -373,11 +389,11 @@ export function importCursor(rulesDir: string): ImportResult {
     }
   }
   
-  findMdcFiles(rulesDir)
+  findCursorFiles(cursorDir)
   
   return {
     format: 'cursor',
-    filePath: rulesDir,
+    filePath: cursorDir,
     rules
   }
 }
