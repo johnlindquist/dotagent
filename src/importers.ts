@@ -215,6 +215,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for Amazon Q rules
+  const amazonqRulesDir = join(repoPath, '.amazonq', 'rules')
+  if (existsSync(amazonqRulesDir)) {
+    try {
+      results.push(importAmazonQ(amazonqRulesDir))
+    } catch (e) {
+      errors.push({ file: amazonqRulesDir, error: String(e) })
+    }
+  }
+  
   return { results, errors }
 }
 
@@ -669,5 +679,66 @@ export function importQodo(filePath: string): ImportResult {
     filePath,
     rules,
     raw: content
+  }
+}
+
+export function importAmazonQ(rulesDir: string): ImportResult {
+  const rules: RuleBlock[] = []
+  
+  // Recursively find all .md files in the Amazon Q rules directory
+  function findMdFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
+    
+    // Ensure deterministic ordering: process directories before files, then sort alphabetically
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1;
+      if (!a.isDirectory() && b.isDirectory()) return 1;
+      return a.name.localeCompare(b.name);
+    })
+    
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+      
+      if (entry.isDirectory()) {
+        // Recursively search subdirectories
+        findMdFiles(fullPath, relPath)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const content = readFileSync(fullPath, 'utf-8')
+        const isPrivateFile = isPrivateRule(fullPath)
+        
+        // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+        let segments = relPath
+          .replace(/\.md$/, '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
+        if (segments[0] === 'private') segments = segments.slice(1)
+        const defaultId = segments.join('/')
+        
+        const metadata: any = {
+          id: `amazonq-${defaultId}`,
+          alwaysApply: true,
+          description: `Amazon Q rules from ${relPath}`
+        }
+        
+        if (isPrivateFile) {
+          metadata.private = true
+        }
+        
+        rules.push({
+          metadata,
+          content: content.trim()
+        })
+      }
+    }
+  }
+  
+  findMdFiles(rulesDir)
+  
+  return {
+    format: 'amazonq',
+    filePath: rulesDir,
+    rules
   }
 }
