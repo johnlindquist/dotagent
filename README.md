@@ -44,37 +44,66 @@ pnpm add -g dotagent
 
 ```bash
 # Import from current directory (creates .agent/ directory)
-agentconfig import .
+dotagent import .
 
 # Import from specific path
-agentconfig import /path/to/repo
+dotagent import /path/to/repo
 
 # Preview without making changes
-agentconfig import . --dry-run
+dotagent import . --dry-run
 ```
 
-### Export `.agent/` directory to all formats
+### Export `.agent/` directory to formats
 
 ```bash
-# Export from current directory's .agent/
-agentconfig export .
+# Interactive export (shows menu to select format)
+dotagent export
 
-# Export to specific directory
-agentconfig export . -o /path/to/repo
+# Export to specific format (non-interactive)
+dotagent export --format copilot
+
+# Export to multiple formats (non-interactive)
+dotagent export --formats copilot,claude,cursor
+
+# Export all formats at once
+dotagent export --formats all
+
+# Export from specific directory
+dotagent export /path/to/repo --format copilot
 
 # Include private rules in export
-agentconfig export --include-private
+dotagent export --include-private --format copilot
+
+# Skip gitignore prompt (useful for CI/CD)
+dotagent export --format copilot --no-gitignore
+
+# Preview without making changes
+dotagent export --dry-run
 ```
 
 ### Convert a specific file
 
 ```bash
 # Auto-detect format
-agentconfig convert .github/copilot-instructions.md
+dotagent convert .github/copilot-instructions.md
 
 # Specify format explicitly
-agentconfig convert my-rules.md -f cursor
+dotagent convert my-rules.md -f cursor
 ```
+
+### CLI Flags Reference
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--help` | `-h` | Show help message |
+| `--format` | `-f` | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo) |
+| `--formats` | | Export to multiple formats (comma-separated list) |
+| `--output` | `-o` | Output directory path |
+| `--overwrite` | `-w` | Overwrite existing files |
+| `--dry-run` | `-d` | Preview operations without making changes |
+| `--include-private` | | Include private rules in export |
+| `--skip-private` | | Skip private rules during import |
+| `--no-gitignore` | | Skip gitignore update prompt |
 
 ## Unified Format
 
