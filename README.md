@@ -1,6 +1,6 @@
 # dotagent
 
-Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, and more.
+Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, Amazon Q Developer, and more.
 
 ## Features
 
@@ -29,6 +29,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Aider | `CONVENTIONS.md` | Plain Markdown |
 | Gemini | `GEMINI.md` | Plain Markdown |
 | Qodo | `best_practices.md` | Plain Markdown |
+| Amazon Q Developer | `.amazonq/rules/*.md` | Plain Markdown |
 
 ## Installation
 
@@ -306,6 +307,7 @@ interface RuleMetadata {
 - `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
 - `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
 - `importQodo(filePath: string): ImportResult` - Import Qodo best practices
+- `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
 
 ### Export Functions
 
@@ -317,6 +319,7 @@ interface RuleMetadata {
 - `exportToWindsurf(rules: RuleBlock[], outputPath: string): void`
 - `exportToZed(rules: RuleBlock[], outputPath: string): void`
 - `exportToCodex(rules: RuleBlock[], outputPath: string): void`
+- `exportToAmazonQ(rules: RuleBlock[], outputDir: string): void`
 - `exportToGemini(rules: RuleBlock[], outputPath: string): void`
 - `exportToQodo(rules: RuleBlock[], outputPath: string): void`
 

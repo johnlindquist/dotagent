@@ -437,6 +437,38 @@ export function exportToQodo(rules: RuleBlock[], outputPath: string, options?: E
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+export function exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
+  const rulesDir = join(outputDir, '.amazonq', 'rules')
+  mkdirSync(rulesDir, { recursive: true })
+
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  for (const rule of filteredRules) {
+    // Support nested folders based on rule ID
+    let filePath: string
+    
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      // Create nested structure based on ID
+      const parts = rule.metadata.id.split('/')
+      const fileName = parts.pop() + '.md'
+      const subDir = join(rulesDir, ...parts)
+      mkdirSync(subDir, { recursive: true })
+      filePath = join(subDir, fileName)
+    } else {
+      // Clean up the ID by removing amazonq- prefix if present
+      const cleanId = rule.metadata.id?.startsWith('amazonq-') 
+        ? rule.metadata.id.substring(8) 
+        : rule.metadata.id || 'rule'
+      const filename = `${cleanId}.md`
+      filePath = join(rulesDir, filename)
+    }
+
+    // Amazon Q uses simple markdown format without frontmatter
+    writeFileSync(filePath, rule.content, 'utf-8')
+  }
+}
+
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: false }): void {
   // Export to all supported formats
   if (!dryRun) {
@@ -451,6 +483,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
     exportToGemini(rules, join(repoPath, 'GEMINI.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)
+    exportToAmazonQ(rules, repoPath, options)
   }
 }
 
