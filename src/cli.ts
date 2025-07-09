@@ -13,10 +13,12 @@ const { values, positionals } = parseArgs({
     help: { type: 'boolean', short: 'h' },
     output: { type: 'string', short: 'o' },
     format: { type: 'string', short: 'f' },
+    formats: { type: 'string' },
     overwrite: { type: 'boolean', short: 'w' },
     'dry-run': { type: 'boolean', short: 'd' },
     'include-private': { type: 'boolean' },
     'skip-private': { type: 'boolean' },
+    'no-gitignore': { type: 'boolean' },
   },
   allowPositionals: true
 }) as { values: any; positionals: string[] }
@@ -34,8 +36,10 @@ ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
   ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo)
+  ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
+  ${color.yellow('--no-gitignore')}   Skip gitignore prompt
 
 ${color.bold('Examples:')}
   ${color.dim('# Import all rules from current directory (creates .agent/)')}
@@ -183,8 +187,30 @@ async function main() {
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' }
       ]
 
-      console.log()
-      const selectedFormat = await select('Select export format:', exportFormats, 0)
+      // Handle format parameter or show interactive menu
+      let selectedFormats: string[] = []
+      
+      if (values.formats) {
+        // Parse comma-separated formats
+        selectedFormats = values.formats.split(',').map((f: string) => f.trim())
+      } else if (values.format) {
+        // Single format from -f flag
+        selectedFormats = [values.format]
+      } else {
+        // Interactive menu
+        console.log()
+        const selectedFormat = await select('Select export format:', exportFormats, 0)
+        selectedFormats = selectedFormat === 'all' ? ['all'] : [selectedFormat]
+      }
+
+      // Validate formats
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo']
+      const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
+      if (invalidFormats.length > 0) {
+        console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
+        console.error(color.dim(`Valid formats: ${validFormats.slice(1).join(', ')}, all`))
+        process.exit(1)
+      }
       
       if (isDryRun) {
         console.log(color.info('Dry run mode - no files will be written'))
@@ -193,82 +219,85 @@ async function main() {
       const options = { includePrivate: values['include-private'] }
       const exportedPaths: string[] = []
       
-      if (selectedFormat === 'all') {
-        if (!isDryRun) {
-          exportAll(rules, outputDir, false, options)
-        }
-        console.log(color.success('Exported to all formats'))
-        exportedPaths.push(
-          '.github/copilot-instructions.md',
-          '.cursor/rules/',
-          '.clinerules',
-          '.windsurfrules',
-          '.rules',
-          'AGENTS.md',
-          'CONVENTIONS.md',
-          'CLAUDE.md',
-          'GEMINI.md',
-          'best_practices.md'
-        )
-      } else {
-        // Export to specific format
-        let exportPath = ''
-        
-        switch (selectedFormat) {
-          case 'copilot':
-            exportPath = join(outputDir, '.github', 'copilot-instructions.md')
-            if (!isDryRun) exportToCopilot(rules, exportPath, options)
-            exportedPaths.push('.github/copilot-instructions.md')
-            break
-          case 'cursor':
-            if (!isDryRun) exportToCursor(rules, outputDir, options)
-            exportPath = join(outputDir, '.cursor/rules/')
-            exportedPaths.push('.cursor/rules/')
-            break
-          case 'cline':
-            exportPath = join(outputDir, '.clinerules')
-            if (!isDryRun) exportToCline(rules, exportPath, options)
-            exportedPaths.push('.clinerules')
-            break
-          case 'windsurf':
-            exportPath = join(outputDir, '.windsurfrules')
-            if (!isDryRun) exportToWindsurf(rules, exportPath, options)
-            exportedPaths.push('.windsurfrules')
-            break
-          case 'zed':
-            exportPath = join(outputDir, '.rules')
-            if (!isDryRun) exportToZed(rules, exportPath, options)
-            exportedPaths.push('.rules')
-            break
-          case 'codex':
-            exportPath = join(outputDir, 'AGENTS.md')
-            if (!isDryRun) exportToCodex(rules, exportPath, options)
-            exportedPaths.push('AGENTS.md')
-            break
-          case 'aider':
-            exportPath = join(outputDir, 'CONVENTIONS.md')
-            if (!isDryRun) exportToAider(rules, exportPath, options)
-            exportedPaths.push('CONVENTIONS.md')
-            break
-          case 'claude':
-            exportPath = join(outputDir, 'CLAUDE.md')
-            if (!isDryRun) exportToClaudeCode(rules, exportPath, options)
-            exportedPaths.push('CLAUDE.md')
-            break
-          case 'gemini':
-            exportPath = join(outputDir, 'GEMINI.md')
-            if (!isDryRun) exportToGemini(rules, exportPath, options)
-            exportedPaths.push('GEMINI.md')
-            break
-          case 'qodo':
-            exportPath = join(outputDir, 'best_practices.md')
-            if (!isDryRun) exportToQodo(rules, exportPath, options)
-            exportedPaths.push('best_practices.md')
-            break
-        }
-        
-        if (exportPath) {
-          console.log(color.success(`Exported to: ${color.path(exportPath)}`))
+      // Handle multiple formats
+      for (const selectedFormat of selectedFormats) {
+        if (selectedFormat === 'all') {
+          if (!isDryRun) {
+            exportAll(rules, outputDir, false, options)
+          }
+          console.log(color.success('Exported to all formats'))
+          exportedPaths.push(
+            '.github/copilot-instructions.md',
+            '.cursor/rules/',
+            '.clinerules',
+            '.windsurfrules',
+            '.rules',
+            'AGENTS.md',
+            'CONVENTIONS.md',
+            'CLAUDE.md',
+            'GEMINI.md',
+            'best_practices.md'
+          )
+        } else {
+          // Export to specific format
+          let exportPath = ''
+          
+          switch (selectedFormat) {
+            case 'copilot':
+              exportPath = join(outputDir, '.github', 'copilot-instructions.md')
+              if (!isDryRun) exportToCopilot(rules, exportPath, options)
+              exportedPaths.push('.github/copilot-instructions.md')
+              break
+            case 'cursor':
+              if (!isDryRun) exportToCursor(rules, outputDir, options)
+              exportPath = join(outputDir, '.cursor/rules/')
+              exportedPaths.push('.cursor/rules/')
+              break
+            case 'cline':
+              exportPath = join(outputDir, '.clinerules')
+              if (!isDryRun) exportToCline(rules, exportPath, options)
+              exportedPaths.push('.clinerules')
+              break
+            case 'windsurf':
+              exportPath = join(outputDir, '.windsurfrules')
+              if (!isDryRun) exportToWindsurf(rules, exportPath, options)
+              exportedPaths.push('.windsurfrules')
+              break
+            case 'zed':
+              exportPath = join(outputDir, '.rules')
+              if (!isDryRun) exportToZed(rules, exportPath, options)
+              exportedPaths.push('.rules')
+              break
+            case 'codex':
+              exportPath = join(outputDir, 'AGENTS.md')
+              if (!isDryRun) exportToCodex(rules, exportPath, options)
+              exportedPaths.push('AGENTS.md')
+              break
+            case 'aider':
+              exportPath = join(outputDir, 'CONVENTIONS.md')
+              if (!isDryRun) exportToAider(rules, exportPath, options)
+              exportedPaths.push('CONVENTIONS.md')
+              break
+            case 'claude':
+              exportPath = join(outputDir, 'CLAUDE.md')
+              if (!isDryRun) exportToClaudeCode(rules, exportPath, options)
+              exportedPaths.push('CLAUDE.md')
+              break
+            case 'gemini':
+              exportPath = join(outputDir, 'GEMINI.md')
+              if (!isDryRun) exportToGemini(rules, exportPath, options)
+              exportedPaths.push('GEMINI.md')
+              break
+            case 'qodo':
+              exportPath = join(outputDir, 'best_practices.md')
+              if (!isDryRun) exportToQodo(rules, exportPath, options)
+              exportedPaths.push('best_practices.md')
+              break
+          }
+          
+          if (exportPath) {
+            console.log(color.success(`Exported to: ${color.path(exportPath)}`))
+          }
         }
       }
       
@@ -276,8 +305,8 @@ async function main() {
         console.log(color.dim(`\nExcluded ${privateRuleCount} private rule(s). Use --include-private to include them.`))
       }
       
-      // Ask about gitignore
-      if (!isDryRun && exportedPaths.length > 0) {
+      // Ask about gitignore unless --no-gitignore is specified
+      if (!isDryRun && exportedPaths.length > 0 && !values['no-gitignore']) {
         console.log()
         const shouldUpdateGitignore = await confirm('Add exported files to .gitignore?', true)
         
