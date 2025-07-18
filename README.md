@@ -25,7 +25,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Cline | `.clinerules` or `.clinerules/*.md` | Plain Markdown |
 | Windsurf | `.windsurfrules` | Plain Markdown |
 | Zed | `.rules` | Plain Markdown |
-| OpenAI Codex | `AGENTS.md` | Plain Markdown |
+| OpenAI Codex, Google Jules | `AGENTS.md` | Plain Markdown |
 | Aider | `CONVENTIONS.md` | Plain Markdown |
 | Gemini | `GEMINI.md` | Plain Markdown |
 | Qodo | `best_practices.md` | Plain Markdown |
