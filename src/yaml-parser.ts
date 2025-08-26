@@ -3,7 +3,8 @@ import type { GrayMatterOption } from 'gray-matter'
 
 /**
  * Custom YAML parser that handles glob patterns starting with *
- * by pre-processing the YAML to quote unquoted strings that start with *
+ * by pre-processing the YAML to quote unquoted strings that start with * during parsing
+ * and removing quotes from glob patterns during stringification
  */
 export function createSafeYamlParser() {
   return {
@@ -42,7 +43,22 @@ export function createSafeYamlParser() {
         return yaml.load(str) as object
       }
     },
-    stringify: (data: object) => yaml.dump(data)
+    stringify: (data: object) => {
+      // First, dump with default options
+      const yamlOutput = yaml.dump(data)
+      
+      // Post-process to remove quotes from glob patterns for universal compatibility
+      return yamlOutput
+        // Remove quotes from simple glob patterns like "*.ts" or '*.ts' -> *.ts
+        .replace(/^(\s*globs:\s*)(['"])(\*[^'"]*)\2$/gm, '$1$3')
+        // Remove quotes from comma-separated globs like "*.tsx,*.ts" -> *.tsx,*.ts
+        .replace(/^(\s*globs:\s*)(['"])([^'"]*\*[^'"]*(?:,[^'"]*\*[^'"]*)*)\2$/gm, '$1$3')
+        // Remove quotes from array items like '- "*.tsx"' or "- '*.tsx'" -> '- *.tsx'
+        .replace(/^(\s*-\s*)(['"])(\*[^'"]*)\2$/gm, '$1$3')
+        // Handle complex patterns like "**/*.{ts,tsx}" or '**/*.{ts,tsx}' -> **/*.{ts,tsx}
+        .replace(/^(\s*globs:\s*)(['"])(\*\*?\/[^'"]*)\2$/gm, '$1$3')
+        .replace(/^(\s*-\s*)(['"])(\*\*?\/[^'"]*)\2$/gm, '$1$3')
+    }
   }
 }
 
