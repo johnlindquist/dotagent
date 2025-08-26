@@ -147,7 +147,9 @@ describe('Export glob pattern formatting', () => {
     const content = readFileSync(scopeRulePath, 'utf-8')
     
     // Should contain quoted scope pattern (scope is not unquoted like globs)
-    expect(content).toMatch(/scope: ['"]?\*\.md['"]?/)
+    expect(content).toMatch(/^[ \t]*scope:\s*['"]\*\.md['"][ \t]*$/m)
+    // And explicitly forbid the unquoted variant
+    expect(content).not.toMatch(/^[ \t]*scope:\s*\*\.md[ \t]*$/m)
   })
 
   it('should preserve other YAML structure correctly', () => {
