@@ -457,8 +457,8 @@ export function exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?:
       filePath = join(subDir, fileName)
     } else {
       // Clean up the ID by removing amazonq- prefix if present
-      const cleanId = rule.metadata.id?.startsWith('amazonq-') 
-        ? rule.metadata.id.substring(8) 
+      const cleanId = rule.metadata.id?.startsWith('amazonq-')
+        ? rule.metadata.id.substring(8)
         : rule.metadata.id || 'rule'
       const filename = `${cleanId}.md`
       filePath = join(rulesDir, filename)
@@ -467,6 +467,83 @@ export function exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?:
     // Amazon Q uses simple markdown format without frontmatter
     writeFileSync(filePath, rule.content, 'utf-8')
   }
+}
+
+export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
+  const rulesDir = join(outputDir, '.roo', 'rules')
+  mkdirSync(rulesDir, { recursive: true })
+
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  for (const rule of filteredRules) {
+    // Support nested folders based on rule ID
+    let filePath: string
+    
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      // Create nested structure based on ID
+      const parts = rule.metadata.id.split('/')
+      const fileName = parts.pop() + '.md'
+      const subDir = join(rulesDir, ...parts)
+      mkdirSync(subDir, { recursive: true })
+      filePath = join(subDir, fileName)
+    } else {
+      const filename = `${rule.metadata.id || 'rule'}.md`
+      filePath = join(rulesDir, filename)
+    }
+
+    // Prepare front matter data - filter out undefined and null values
+    const frontMatterBase: Record<string, unknown> = {}
+
+    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
+    if (rule.metadata.globs !== undefined && rule.metadata.globs !== null) frontMatterBase.globs = rule.metadata.globs
+    if (rule.metadata.manual !== undefined && rule.metadata.manual !== null) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.priority !== undefined && rule.metadata.priority !== null) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined && rule.metadata.triggers !== null) frontMatterBase.triggers = rule.metadata.triggers
+
+    // Add other metadata fields but exclude 'private' if it's false or null
+    for (const [key, value] of Object.entries(rule.metadata)) {
+      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
+        // Don't include private: false in frontmatter
+        if (key === 'private' && value === false) continue
+        frontMatterBase[key] = value
+      }
+    }
+
+    const frontMatter = frontMatterBase
+
+    // Create Markdown content with frontmatter
+    const mdContent = matter.stringify(rule.content, frontMatter, grayMatterOptions)
+    writeFileSync(filePath, mdContent, 'utf-8')
+  }
+}
+
+export function exportToJunie(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
+  const junieDir = join(outputDir, '.junie')
+  mkdirSync(junieDir, { recursive: true })
+
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  // Junie uses a single guidelines.md file, so we need to combine all rules
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, outputDir)
+  
+  const mainContent = alwaysApplyRules
+    .map(rule => {
+      const header = rule.metadata.description ? `## ${rule.metadata.description}\n\n` : ''
+      return header + rule.content
+    })
+    .join('\n\n')
+  
+  const fullContent = conditionalSection
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
+
+  const filePath = join(junieDir, 'guidelines.md')
+  writeFileSync(filePath, fullContent, 'utf-8')
 }
 
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: false }): void {
@@ -484,6 +561,8 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToGemini(rules, join(repoPath, 'GEMINI.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)
     exportToAmazonQ(rules, repoPath, options)
+    exportToRoo(rules, repoPath, options)
+    exportToJunie(rules, repoPath, options)
   }
 }
 

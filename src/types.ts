@@ -21,7 +21,7 @@ export interface RuleBlock {
 }
 
 export interface ImportResult {
-  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'unknown'
+  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'roo' | 'junie' | 'unknown'
   filePath: string
   rules: RuleBlock[]
   raw?: string
@@ -33,7 +33,7 @@ export interface ImportResults {
 }
 
 export interface ExportOptions {
-  format?: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq'
+  format?: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'roo' | 'junie'
   outputPath?: string
   overwrite?: boolean
   includePrivate?: boolean // Include private rules in export

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -18,10 +18,17 @@ const { values, positionals } = parseArgs({
     'dry-run': { type: 'boolean', short: 'd' },
     'include-private': { type: 'boolean' },
     'skip-private': { type: 'boolean' },
+    'gitignore': { type: 'boolean' },
     'no-gitignore': { type: 'boolean' },
   },
   allowPositionals: true
 }) as { values: any; positionals: string[] }
+
+// Validate mutually exclusive flags
+if (values['gitignore'] && values['no-gitignore']) {
+  console.error(color.error('Cannot use both --gitignore and --no-gitignore flags together'))
+  process.exit(1)
+}
 
 function showHelp() {
   console.log(`
@@ -35,10 +42,11 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie)
   ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
+  ${color.yellow('--gitignore')}      Auto-update gitignore (skip prompt)
   ${color.yellow('--no-gitignore')}   Skip gitignore prompt
 
 ${color.bold('Examples:')}
@@ -184,7 +192,9 @@ async function main() {
         { name: 'Aider (CONVENTIONS.md)', value: 'aider' },
         { name: 'Claude Code (CLAUDE.md)', value: 'claude' },
         { name: 'Gemini CLI (GEMINI.md)', value: 'gemini' },
-        { name: 'Qodo Merge (best_practices.md)', value: 'qodo' }
+        { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
+        { name: 'Roo Code (.roo/rules/)', value: 'roo' },
+        { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' }
       ]
 
       // Handle format parameter or show interactive menu
@@ -204,7 +214,7 @@ async function main() {
       }
 
       // Validate formats
-      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo']
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie']
       const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
       if (invalidFormats.length > 0) {
         console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
@@ -293,6 +303,16 @@ async function main() {
               if (!isDryRun) exportToQodo(rules, exportPath, options)
               exportedPaths.push('best_practices.md')
               break
+            case 'roo':
+              if (!isDryRun) exportToRoo(rules, outputDir, options)
+              exportPath = join(outputDir, '.roo/rules/')
+              exportedPaths.push('.roo/rules/')
+              break
+            case 'junie':
+              if (!isDryRun) exportToJunie(rules, outputDir, options)
+              exportPath = join(outputDir, '.junie/guidelines.md')
+              exportedPaths.push('.junie/guidelines.md')
+              break
           }
           
           if (exportPath) {
@@ -305,11 +325,21 @@ async function main() {
         console.log(color.dim(`\nExcluded ${privateRuleCount} private rule(s). Use --include-private to include them.`))
       }
       
-      // Ask about gitignore unless --no-gitignore is specified
-      if (!isDryRun && exportedPaths.length > 0 && !values['no-gitignore']) {
-        console.log()
-        const shouldUpdateGitignore = await confirm('Add exported files to .gitignore?', true)
+      // Handle gitignore updates
+      if (!isDryRun && exportedPaths.length > 0) {
+        let shouldUpdateGitignore = false
         
+        if (values['gitignore']) {
+          // --gitignore flag: automatically update gitignore (answer yes)
+          shouldUpdateGitignore = true
+          console.log(color.info('Updating .gitignore (auto-enabled by --gitignore flag)'))
+        } else if (!values['no-gitignore']) {
+          // Default behavior: ask user
+          console.log()
+          shouldUpdateGitignore = await confirm('Add exported files to .gitignore?', true)
+        }
+        // If --no-gitignore is specified, shouldUpdateGitignore remains false
+
         if (shouldUpdateGitignore) {
           updateGitignoreWithPaths(outputDir, exportedPaths)
           console.log(color.success('Updated .gitignore'))
@@ -345,9 +375,10 @@ async function main() {
         else if (inputPath.endsWith('GEMINI.md')) format = 'gemini'
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
+        else if (inputPath.includes('.roo/rules')) format = 'roo'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo)'))
           process.exit(1)
         }
       }
@@ -389,6 +420,9 @@ async function main() {
           break
         case 'qodo':
           result = importQodo(inputPath)
+          break
+        case 'roo':
+          result = importRoo(inputPath)
           break
         default:
           console.error(color.error(`Unknown format: ${format}`))

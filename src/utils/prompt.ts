@@ -1,6 +1,11 @@
 import { select as inquirerSelect, confirm as inquirerConfirm } from '@inquirer/prompts'
 
 export async function confirm(question: string, defaultValue = false): Promise<boolean> {
+  // Check if we're in a non-interactive environment
+  if (!process.stdin.isTTY || process.env.NODE_ENV === 'test') {
+    return defaultValue
+  }
+  
   return await inquirerConfirm({
     message: question,
     default: defaultValue
