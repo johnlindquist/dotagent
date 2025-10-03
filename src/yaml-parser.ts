@@ -3,7 +3,8 @@ import type { GrayMatterOption } from 'gray-matter'
 
 /**
  * Custom YAML parser that handles glob patterns starting with *
- * by pre-processing the YAML to quote unquoted strings that start with *
+ * by pre-processing the YAML to quote unquoted strings that start with * during parsing
+ * and removing quotes from glob patterns during stringification
  */
 export function createSafeYamlParser() {
   return {
@@ -42,7 +43,59 @@ export function createSafeYamlParser() {
         return yaml.load(str) as object
       }
     },
-    stringify: (data: object) => yaml.dump(data)
+    stringify: (data: object) => {
+      const yamlOutput = yaml.dump(data)
+      const lines = yamlOutput.split(/\r?\n/)
+      const out: string[] = []
+      let inGlobsArray = false
+      let globsIndent = ''
+      const containsGlob = (s: string) => s.includes('*')
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i]
+
+        // Detect the globs key
+        const globsMatch = line.match(/^(\s*)globs:\s*(.*)$/)
+        if (globsMatch) {
+          globsIndent = globsMatch[1]
+          const value = globsMatch[2]
+
+          // Array style begins on next lines
+          if (value === '') {
+            inGlobsArray = true
+            out.push(line)
+            continue
+          }
+
+          // Scalar style on same line: globs: "..."
+          const scalar = value.match(/^(['"])(.+)\1(\s*(?:#.*)?)$/)
+          if (scalar && containsGlob(scalar[2])) {
+            line = `${globsIndent}globs: ${scalar[2]}${scalar[3] ?? ''}`
+          }
+          out.push(line)
+          continue
+        }
+
+        if (inGlobsArray) {
+          // End of the globs array when we dedent
+          if (!line.startsWith(globsIndent + '  ')) {
+            inGlobsArray = false
+            i-- // reprocess this line outside array handling
+            continue
+          }
+          // Sequence item: - "..."
+          const item = line.match(/^(\s*-\s*)(['"])(.+)\2(\s*(?:#.*)?)$/)
+          if (item && containsGlob(item[3])) {
+            line = `${item[1]}${item[3]}${item[4] ?? ''}`
+          }
+          out.push(line)
+          continue
+        }
+
+        out.push(line)
+      }
+      return out.join('\n')
+    }
   }
 }
 
