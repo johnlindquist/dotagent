@@ -17,7 +17,9 @@ export {
   importClaudeCode,
   importGemini,
   importQodo,
-  importAmazonQ
+  importAmazonQ,
+  importRoo,
+  importJunie
 } from './importers.js'
 
 export {
@@ -34,6 +36,8 @@ export {
   exportToGemini,
   exportToQodo,
   exportToAmazonQ,
+  exportToRoo,
+  exportToJunie,
   exportAll
 } from './exporters.js'
 

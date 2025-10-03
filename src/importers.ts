@@ -1,7 +1,6 @@
 import { readFileSync, existsSync, readdirSync, statSync, Dirent } from 'fs'
 import { join, basename } from 'path'
 import matter from 'gray-matter'
-import yaml from 'js-yaml'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
 import { grayMatterOptions } from './yaml-parser.js'
 
@@ -222,6 +221,26 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       results.push(importAmazonQ(amazonqRulesDir))
     } catch (e) {
       errors.push({ file: amazonqRulesDir, error: String(e) })
+    }
+  }
+
+  // Check for Roo rules
+  const rooRulesDir = join(repoPath, '.roo', 'rules')
+  if (existsSync(rooRulesDir)) {
+    try {
+      results.push(importRoo(rooRulesDir))
+    } catch (e) {
+      errors.push({ file: rooRulesDir, error: String(e) })
+    }
+  }
+
+  // Check for Junie guidelines
+  const junieGuidelines = join(repoPath, '.junie', 'guidelines.md')
+  if (existsSync(junieGuidelines)) {
+    try {
+      results.push(importJunie(junieGuidelines))
+    } catch (e) {
+      errors.push({ file: junieGuidelines, error: String(e) })
     }
   }
   
@@ -740,5 +759,101 @@ export function importAmazonQ(rulesDir: string): ImportResult {
     format: 'amazonq',
     filePath: rulesDir,
     rules
+  }
+}
+
+export function importRoo(rulesDir: string): ImportResult {
+  const rules: RuleBlock[] = []
+  
+  // Recursively find all .md files in the Roo rules directory
+  function findMdFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
+      
+      // Ensure deterministic ordering: process directories before files, then sort alphabetically
+      entries.sort((a: Dirent, b: Dirent) => {
+        if (a.isDirectory() && !b.isDirectory()) return -1;
+        if (!a.isDirectory() && b.isDirectory()) return 1;
+        return a.name.localeCompare(b.name);
+      })
+      
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name)
+        const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+        
+        if (entry.isDirectory()) {
+          // Recursively search subdirectories
+          findMdFiles(fullPath, relPath)
+        } else if (entry.isFile() && entry.name.endsWith('.md')) {
+          const content = readFileSync(fullPath, 'utf-8')
+          const { data, content: body } = matter(content, grayMatterOptions)
+          
+          // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+          let segments = relPath
+            .replace(/\.md$/, '')
+            .replace(/\\/g, '/')
+            .split('/')
+            .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
+          if (segments[0] === 'private') segments = segments.slice(1)
+          const defaultId = segments.join('/')
+          
+          // Check if this is a private rule (either by path or frontmatter)
+          const isPrivateFile = isPrivateRule(fullPath)
+          
+          const metadata: any = {
+            id: data.id || defaultId,
+            ...data
+          }
+          
+          // Set default alwaysApply to false if not specified
+          if (metadata.alwaysApply === undefined) {
+            metadata.alwaysApply = false
+          }
+          
+          // Only set private if it's true (from file pattern or frontmatter)
+          if (data.private === true || (data.private === undefined && isPrivateFile)) {
+            metadata.private = true
+          }
+          
+          rules.push({
+            metadata,
+            content: body.trim()
+          })
+        }
+      }
+    }
+    
+    findMdFiles(rulesDir)
+    
+    return {
+      format: 'roo',
+      filePath: rulesDir,
+      rules
+    }
+}
+
+export function importJunie(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'junie-guidelines',
+    alwaysApply: true,
+    description: 'JetBrains Junie guidelines and instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
+  const rules: RuleBlock[] = [{
+    metadata,
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'junie' as any,
+    filePath,
+    rules,
+    raw: content
   }
 }

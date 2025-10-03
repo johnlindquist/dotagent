@@ -16,20 +16,22 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 
 ## Supported Formats
 
-| Tool/IDE | Rule File | Format |
-|----------|-----------|---------|
-| Agent (dotagent) | `.agent/**/*.md` | Markdown with YAML frontmatter |
-| Claude Code | `CLAUDE.md` | Plain Markdown |
-| VS Code (Copilot) | `.github/copilot-instructions.md` | Plain Markdown |
-| Cursor | `.cursor/**/*.mdc`, `.cursor/**/*.md` | Markdown with YAML frontmatter |
-| Cline | `.clinerules` or `.clinerules/*.md` | Plain Markdown |
-| Windsurf | `.windsurfrules` | Plain Markdown |
-| Zed | `.rules` | Plain Markdown |
-| OpenAI Codex | `AGENTS.md` | Plain Markdown |
-| Aider | `CONVENTIONS.md` | Plain Markdown |
-| Gemini | `GEMINI.md` | Plain Markdown |
-| Qodo | `best_practices.md` | Plain Markdown |
-| Amazon Q Developer | `.amazonq/rules/*.md` | Plain Markdown |
+| Tool/IDE           | Rule File                             | Format                         | Slug     |
+| ------------------ | ------------------------------------- | ------------------------------ | -------- |
+| Agent (dotagent)   | `.agent/**/*.md`                      | Markdown with YAML frontmatter | agent    |
+| Claude Code        | `CLAUDE.md`                           | Plain Markdown                 | claude   |
+| VS Code (Copilot)  | `.github/copilot-instructions.md`     | Plain Markdown                 | copilot  |
+| Cursor             | `.cursor/**/*.mdc`, `.cursor/**/*.md` | Markdown with YAML frontmatter | cursor   |
+| Cline              | `.clinerules` or `.clinerules/*.md`   | Plain Markdown                 | cline    |
+| Windsurf           | `.windsurfrules`                      | Plain Markdown                 | windsurf |
+| Zed                | `.rules`                              | Plain Markdown                 | zed      |
+| OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
+| Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
+| Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
+| Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
+| Amazon Q Developer | `.amazonq/rules/*.md`                 | Plain Markdown                 | amazonq  |
+| JetBrains Junie    | `.junie/guidelines.md`                | Plain Markdown                 | junie    |
+| Roo Code           | `.roo/rules/*.md`                     | Markdown with YAML frontmatter | roo      |
 
 ## Installation
 
@@ -75,6 +77,9 @@ dotagent export /path/to/repo --format copilot
 # Include private rules in export
 dotagent export --include-private --format copilot
 
+# Auto-update gitignore (skip prompt)
+dotagent export --format copilot --gitignore
+
 # Skip gitignore prompt (useful for CI/CD)
 dotagent export --format copilot --no-gitignore
 
@@ -97,13 +102,14 @@ dotagent convert my-rules.md -f cursor
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--help` | `-h` | Show help message |
-| `--format` | `-f` | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo) |
+| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo) |
 | `--formats` | | Export to multiple formats (comma-separated list) |
 | `--output` | `-o` | Output directory path |
 | `--overwrite` | `-w` | Overwrite existing files |
 | `--dry-run` | `-d` | Preview operations without making changes |
 | `--include-private` | | Include private rules in export |
 | `--skip-private` | | Skip private rules during import |
+| `--gitignore` | | Auto-update gitignore (skip prompt) |
 | `--no-gitignore` | | Skip gitignore update prompt |
 
 ## Unified Format
@@ -204,15 +210,17 @@ Confidential requirements
 
 ### Private Rules in Other Formats
 
-| Format | Public File | Private File |
-|--------|-------------|---------------|
-| Copilot | `.github/copilot-instructions.md` | `.github/copilot-instructions.local.md` |
-| Cursor | `.cursor/rules/*.mdc` | `.cursor/rules/*.local.mdc` |
-| Cline | `.clinerules` | `.clinerules.local` |
-| Windsurf | `.windsurfrules` | `.windsurfrules.local` |
-| Zed | `.rules` | `.rules.local` |
-| Claude | `CLAUDE.md` | `CLAUDE.local.md` |
-| Gemini | `GEMINI.md` | `GEMINI.local.md` |
+| Format   | Public File                       | Private File                            |
+| -------- | --------------------------------- | --------------------------------------- |
+| Copilot  | `.github/copilot-instructions.md` | `.github/copilot-instructions.local.md` |
+| Cursor   | `.cursor/rules/*.mdc`             | `.cursor/rules/*.local.mdc`             |
+| Cline    | `.clinerules`                     | `.clinerules.local`                     |
+| Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
+| Zed      | `.rules`                          | `.rules.local`                          |
+| Claude   | `CLAUDE.md`                       | `CLAUDE.local.md`                       |
+| Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
+| Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
+| Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
 
 ### CLI Options
 
@@ -243,6 +251,8 @@ AGENTS.local.md
 CONVENTIONS.local.md
 CLAUDE.local.md
 GEMINI.local.md
+.junie/guidelines.local.md
+.roo/rules/*.local.md
 ```
 
 ## Programmatic Usage
@@ -308,6 +318,8 @@ interface RuleMetadata {
 - `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
 - `importQodo(filePath: string): ImportResult` - Import Qodo best practices
 - `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
+- `importJunie(filePath: string): ImportResult` - Import JetBrains Junie guidelines
+- `importRoo(rulesDir: string): ImportResult` - Import Roo Code rules
 
 ### Export Functions
 
@@ -322,6 +334,8 @@ interface RuleMetadata {
 - `exportToAmazonQ(rules: RuleBlock[], outputDir: string): void`
 - `exportToGemini(rules: RuleBlock[], outputPath: string): void`
 - `exportToQodo(rules: RuleBlock[], outputPath: string): void`
+- `exportToJunie(rules: RuleBlock[], outputPath: string): void`
+- `exportToRoo(rules: RuleBlock[], outputDir: string): void`
 
 ## Development
 
