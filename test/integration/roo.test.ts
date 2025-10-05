@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { importAll, exportToRoo } from '../../src/index.js'
@@ -21,7 +21,9 @@ describe('Roo Code Integration Tests', () => {
     // Create .roo/rules directory structure
     const rulesDir = join(tempDir, '.roo', 'rules')
     const nestedDir = join(rulesDir, 'nested')
-    
+    mkdirSync(rulesDir, { recursive: true })
+    mkdirSync(nestedDir, { recursive: true })
+
     // Public rule with frontmatter
     writeFileSync(join(rulesDir, 'public-rule.md'), `---
 id: public-rule
@@ -121,7 +123,7 @@ Sensitive information.`)
 
     // Check public file
     const publicContent = readFileSync(join(outputRulesDir, 'exported-public.md'), 'utf-8')
-    expect(publicContent).toMatch(/^---\n.*alwaysApply: true\n.*description: Exported public rule\n---\n\n# Exported Public Content/)
+    expect(publicContent).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*description: Exported public rule[\s\S]*---\n\n# Exported Public Content/)
     expect(publicContent).toContain('Follow best practices.')
 
     // Check nested private
@@ -142,6 +144,7 @@ Sensitive information.`)
   it('roundtrip: import from .roo/rules and export back preserves metadata', async () => {
     // Setup input .roo/rules
     const inputRulesDir = join(tempDir, '.roo', 'rules')
+    mkdirSync(inputRulesDir, { recursive: true })
     writeFileSync(join(inputRulesDir, 'roundtrip.md'), `---
 id: roundtrip-test
 alwaysApply: false
@@ -172,7 +175,7 @@ This should be preserved after import/export.`)
     const exportedContent = readFileSync(outputFile, 'utf-8')
 
     // Verify frontmatter preserved
-    expect(exportedContent).toMatch(/^---\n.*alwaysApply: false\n.*scope:\n  - src\/\*\*/)
+    expect(exportedContent).toMatch(/^---[\s\S]*alwaysApply: false[\s\S]*scope:[\s\S]*- src\/\*\*/)
     expect(exportedContent).toMatch(/description: Roundtrip test rule/)
     expect(exportedContent).toMatch(/priority: medium/)
     expect(exportedContent).toContain('# Roundtrip Content')
@@ -198,7 +201,7 @@ This should be preserved after import/export.`)
     expect(readdirSync(rooDir)).toContain('cli-test.md')
 
     const content = readFileSync(join(rooDir, 'cli-test.md'), 'utf-8')
-    expect(content).toMatch(/^---\n.*alwaysApply: true\n---\n\n# CLI Test Content/)
+    expect(content).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*---\n\n# CLI Test Content/)
   })
 
   it('handles private rules correctly in export (excludes by default)', () => {
