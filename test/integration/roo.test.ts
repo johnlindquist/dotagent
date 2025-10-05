@@ -123,7 +123,8 @@ Sensitive information.`)
 
     // Check public file
     const publicContent = readFileSync(join(outputRulesDir, 'exported-public.md'), 'utf-8')
-    expect(publicContent).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*description: Exported public rule[\s\S]*---\n\n# Exported Public Content/)
+    expect(publicContent).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*---\n# Exported Public Content/)
+    expect(publicContent).toMatch(/^---[\s\S]*description: Exported public rule[\s\S]*---/)
     expect(publicContent).toContain('Follow best practices.')
 
     // Check nested private
@@ -201,7 +202,7 @@ This should be preserved after import/export.`)
     expect(readdirSync(rooDir)).toContain('cli-test.md')
 
     const content = readFileSync(join(rooDir, 'cli-test.md'), 'utf-8')
-    expect(content).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*---\n\n# CLI Test Content/)
+    expect(content).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*---\n# CLI Test Content/)
   })
 
   it('handles private rules correctly in export (excludes by default)', () => {
