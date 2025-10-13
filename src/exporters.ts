@@ -337,8 +337,11 @@ export function exportToZed(rules: RuleBlock[], outputPath: string, options?: Ex
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
-export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
-  // Filter out private rules unless includePrivate is true
+function exportSingleFileWithHeaders(
+  rules: RuleBlock[],
+  outputPath: string,
+  options?: ExportOptions
+): void {
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
   
   const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
@@ -357,6 +360,10 @@ export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: 
 
   ensureDirectoryExists(outputPath)
   writeFileSync(outputPath, fullContent, 'utf-8')
+}
+
+export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
 export function exportToAider(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
@@ -379,47 +386,11 @@ export function exportToAider(rules: RuleBlock[], outputPath: string, options?: 
 }
 
 export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
-  // Filter out private rules unless includePrivate is true
-  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
-  
-  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
-  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
-  
-  const mainContent = alwaysApplyRules
-    .map(rule => {
-      const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
-      return header + rule.content
-    })
-    .join('\n\n')
-  
-  const fullContent = conditionalSection 
-    ? `${mainContent}\n\n${conditionalSection}`
-    : mainContent
-
-  ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, fullContent, 'utf-8')
+  exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
 export function exportToOpenCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
-  // Filter out private rules unless includePrivate is true
-  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
-  
-  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
-  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
-  
-  const mainContent = alwaysApplyRules
-    .map(rule => {
-      const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
-      return header + rule.content
-    })
-    .join('\n\n')
-  
-  const fullContent = conditionalSection 
-    ? `${mainContent}\n\n${conditionalSection}`
-    : mainContent
-
-  ensureDirectoryExists(outputPath)
-  writeFileSync(outputPath, fullContent, 'utf-8')
+  exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
 export function exportToGemini(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
@@ -580,7 +551,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToCodex(rules, join(repoPath, 'AGENTS.md'), options)
     exportToAider(rules, join(repoPath, 'CONVENTIONS.md'), options)
     exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
-    exportToOpenCode(rules, join(repoPath, 'AGENTS.opencode.md'), options)
+    exportToOpenCode(rules, join(repoPath, 'AGENTS.md'), options)
     exportToGemini(rules, join(repoPath, 'GEMINI.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)
     exportToAmazonQ(rules, repoPath, options)

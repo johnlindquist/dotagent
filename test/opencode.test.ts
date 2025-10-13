@@ -121,8 +121,8 @@ Use Node.js 20+ and pnpm for package management.
 
       const exported = readFileSync(agentsPath, 'utf8')
       
-      // Should not have a header if no description
-      expect(exported).not.toContain('#')
+      // Should not have a generated header if no description
+      expect(exported.split('\n')[0]).not.toMatch(/^\s#/)
       expect(exported.trim()).toBe('Always use TypeScript')
     } finally {
       rmSync(tempDir, { recursive: true, force: true })
@@ -168,6 +168,11 @@ src/
       expect(exported).toContain('# OpenCode agents and instructions')
       expect(exported).toContain('Always validate inputs')
       expect(exported).toContain('Clean code is better than clever code')
+      
+      // Verify Markdown structures are preserved
+      expect(exported).toMatch(/```[\s\S]*?```/)  // Code blocks
+      expect(exported).toMatch(/^\d+\.\s/m)       // Ordered lists
+      expect(exported).toMatch(/^>\s/m)           // Blockquotes
     } finally {
       rmSync(tempDir, { recursive: true, force: true })
     }

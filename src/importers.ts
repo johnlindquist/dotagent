@@ -154,7 +154,17 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
-  // Check for AGENTS.md (OpenCode) - Note: This conflicts with OpenAI Codex, 
+  // Check for AGENTS.md (OpenCode)
+  const opencodeMd = join(repoPath, 'AGENTS.md')
+  if (existsSync(opencodeMd)) {
+    try {
+      results.push(importOpenCode(opencodeMd))
+    } catch (e) {
+      errors.push({ file: opencodeMd, error: String(e) })
+    }
+  }
+  
+  // Check for AGENTS.md (OpenAI Codex) - Note: This conflicts with OpenCode,
   // so we need to handle this carefully. For now, we'll prioritize OpenAI Codex
   // since it was implemented first, but this could be made configurable.
   // Users can explicitly specify the format using the CLI if needed.

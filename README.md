@@ -26,7 +26,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Windsurf           | `.windsurfrules`                      | Plain Markdown                 | windsurf |
 | Zed                | `.rules`                              | Plain Markdown                 | zed      |
 | OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
-| OpenCode           | `AGENTS.md`                           | Plain Markdown                 | opencode |
+| OpenCode           | `AGENTS.md`                          | Plain Markdown                 | opencode |
 | Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
 | Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
 | Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
@@ -219,7 +219,7 @@ Confidential requirements
 | Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
 | Zed      | `.rules`                          | `.rules.local`                          |
 | Claude   | `CLAUDE.md`                       | `CLAUDE.local.md`                       |
-| OpenCode | `AGENTS.md`                       | `AGENTS.local.md`                       |
+| OpenCode | `AGENTS.md`                      | `AGENTS.local.md`                |
 | Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
 | Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
 | Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
