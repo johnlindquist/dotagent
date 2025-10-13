@@ -26,6 +26,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Windsurf           | `.windsurfrules`                      | Plain Markdown                 | windsurf |
 | Zed                | `.rules`                              | Plain Markdown                 | zed      |
 | OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
+| OpenCode           | `AGENTS.md`                           | Plain Markdown                 | opencode |
 | Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
 | Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
 | Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
@@ -102,7 +103,7 @@ dotagent convert my-rules.md -f cursor
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--help` | `-h` | Show help message |
-| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo) |
+| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo\|opencode) |
 | `--formats` | | Export to multiple formats (comma-separated list) |
 | `--output` | `-o` | Output directory path |
 | `--overwrite` | `-w` | Overwrite existing files |
@@ -218,6 +219,7 @@ Confidential requirements
 | Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
 | Zed      | `.rules`                          | `.rules.local`                          |
 | Claude   | `CLAUDE.md`                       | `CLAUDE.local.md`                       |
+| OpenCode | `AGENTS.md`                       | `AGENTS.local.md`                       |
 | Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
 | Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
 | Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
@@ -315,6 +317,7 @@ interface RuleMetadata {
 - `importWindsurf(filePath: string): ImportResult` - Import Windsurf rules
 - `importZed(filePath: string): ImportResult` - Import Zed rules
 - `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
+- `importOpenCode(filePath: string): ImportResult` - Import OpenCode format
 - `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
 - `importQodo(filePath: string): ImportResult` - Import Qodo best practices
 - `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
@@ -331,6 +334,7 @@ interface RuleMetadata {
 - `exportToWindsurf(rules: RuleBlock[], outputPath: string): void`
 - `exportToZed(rules: RuleBlock[], outputPath: string): void`
 - `exportToCodex(rules: RuleBlock[], outputPath: string): void`
+- `exportToOpenCode(rules: RuleBlock[], outputPath: string): void`
 - `exportToAmazonQ(rules: RuleBlock[], outputDir: string): void`
 - `exportToGemini(rules: RuleBlock[], outputPath: string): void`
 - `exportToQodo(rules: RuleBlock[], outputPath: string): void`

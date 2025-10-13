@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -42,7 +42,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie|opencode)
   ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
@@ -194,7 +194,8 @@ async function main() {
         { name: 'Gemini CLI (GEMINI.md)', value: 'gemini' },
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
         { name: 'Roo Code (.roo/rules/)', value: 'roo' },
-        { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' }
+        { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' },
+        { name: 'OpenCode (AGENTS.md)', value: 'opencode' }
       ]
 
       // Handle format parameter or show interactive menu
@@ -214,7 +215,7 @@ async function main() {
       }
 
       // Validate formats
-      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie']
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode']
       const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
       if (invalidFormats.length > 0) {
         console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
@@ -298,6 +299,11 @@ async function main() {
               if (!isDryRun) exportToGemini(rules, exportPath, options)
               exportedPaths.push('GEMINI.md')
               break
+            case 'opencode':
+              exportPath = join(outputDir, 'AGENTS.md')
+              if (!isDryRun) exportToOpenCode(rules, exportPath, options)
+              exportedPaths.push('AGENTS.md')
+              break
             case 'qodo':
               exportPath = join(outputDir, 'best_practices.md')
               if (!isDryRun) exportToQodo(rules, exportPath, options)
@@ -378,7 +384,7 @@ async function main() {
         else if (inputPath.includes('.roo/rules')) format = 'roo'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode)'))
           process.exit(1)
         }
       }
@@ -414,6 +420,9 @@ async function main() {
           break
         case 'claude':
           result = importClaudeCode(inputPath)
+          break
+        case 'opencode':
+          result = importOpenCode(inputPath)
           break
         case 'gemini':
           result = importGemini(inputPath)
