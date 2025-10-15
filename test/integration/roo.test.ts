@@ -116,7 +116,7 @@ Sensitive information.`)
       }
     ]
 
-    exportToRoo(rules, tempDir)
+    exportToRoo(rules, tempDir, { includePrivate: true })
 
     const outputRulesDir = join(tempDir, '.roo', 'rules')
     expect(readdirSync(outputRulesDir)).toContain('exported-public.md')

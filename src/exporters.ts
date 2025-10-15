@@ -493,19 +493,21 @@ export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: Exp
     }
 
     // Prepare front matter data - filter out undefined and null values
+    // Order matters for consistent output and test expectations
     const frontMatterBase: Record<string, unknown> = {}
 
-    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
+    // Add fields in deterministic order: alwaysApply, description, scope, globs, manual, priority, triggers
     if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
+    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
     if (rule.metadata.globs !== undefined && rule.metadata.globs !== null) frontMatterBase.globs = rule.metadata.globs
     if (rule.metadata.manual !== undefined && rule.metadata.manual !== null) frontMatterBase.manual = rule.metadata.manual
-    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
     if (rule.metadata.priority !== undefined && rule.metadata.priority !== null) frontMatterBase.priority = rule.metadata.priority
     if (rule.metadata.triggers !== undefined && rule.metadata.triggers !== null) frontMatterBase.triggers = rule.metadata.triggers
 
     // Add other metadata fields but exclude 'private' if it's false or null
     for (const [key, value] of Object.entries(rule.metadata)) {
-      if (!['id', 'description', 'alwaysApply', 'globs', 'manual', 'scope', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
+      if (!['id', 'alwaysApply', 'description', 'scope', 'globs', 'manual', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
         // Don't include private: false in frontmatter
         if (key === 'private' && value === false) continue
         frontMatterBase[key] = value
@@ -515,7 +517,9 @@ export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: Exp
     const frontMatter = frontMatterBase
 
     // Create Markdown content with frontmatter
-    const mdContent = matter.stringify(rule.content, frontMatter, grayMatterOptions)
+    // Ensure content starts with newline for proper frontmatter formatting
+    const content = rule.content.startsWith('\n') ? rule.content : '\n' + rule.content
+    const mdContent = matter.stringify(content, frontMatter, grayMatterOptions)
     writeFileSync(filePath, mdContent, 'utf-8')
   }
 }
