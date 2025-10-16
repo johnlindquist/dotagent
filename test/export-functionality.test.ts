@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToQodo, exportAll } from '../src/exporters.js'
+import { exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToQodo, exportToOpenCode, exportAll } from '../src/exporters.js'
 import type { RuleBlock } from '../src/types.js'
 
 describe('Export functionality with format selection', () => {
@@ -150,6 +150,7 @@ describe('Export format selection mapping', () => {
       'windsurf': { exporter: exportToWindsurf, path: '.windsurfrules' },
       'zed': { exporter: exportToZed, path: '.rules' },
       'codex': { exporter: exportToCodex, path: 'AGENTS.md' },
+      'opencode': { exporter: exportToOpenCode, path: 'AGENTS.md' },
       'aider': { exporter: exportToAider, path: 'CONVENTIONS.md' },
       'claude': { exporter: exportToClaudeCode, path: 'CLAUDE.md' },
       'qodo': { exporter: exportToQodo, path: 'best_practices.md' }
