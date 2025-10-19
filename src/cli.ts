@@ -463,6 +463,13 @@ async function main() {
   }
 }
 
+function filterNewPatterns(content: string, paths: string[]): string[] {
+  return paths.filter(p => {
+    const pattern = p.endsWith('/') ? p + '**' : p
+    return !content.includes(pattern)
+  })
+}
+
 function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
@@ -472,12 +479,7 @@ function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolea
   }
   
   const content = readFileSync(gitignorePath, 'utf-8')
-  
-  // Check if any of the patterns already exist
-  const newPatterns = paths.filter(p => {
-    const pattern = p.endsWith('/') ? p + '**' : p
-    return !content.includes(pattern)
-  })
+  const newPatterns = filterNewPatterns(content, paths)
   
   return newPatterns.length > 0
 }
@@ -496,10 +498,7 @@ function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
     const content = readFileSync(gitignorePath, 'utf-8')
     
     // Check if any of the patterns already exist
-    const newPatterns = paths.filter(p => {
-      const pattern = p.endsWith('/') ? p + '**' : p
-      return !content.includes(pattern)
-    })
+    const newPatterns = filterNewPatterns(content, paths)
     
     if (newPatterns.length > 0) {
       appendFileSync(gitignorePath, patterns)
