@@ -464,10 +464,24 @@ async function main() {
 }
 
 function filterNewPatterns(content: string, paths: string[]): string[] {
-  return paths.filter(p => {
-    const pattern = p.endsWith('/') ? p + '**' : p
-    return !content.includes(pattern)
-  })
+  const lines = content
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#'))
+
+  const lineSet = new Set(lines)
+
+  const variants = (p: string): string[] => {
+    if (p.endsWith('/')) {
+      const base = p.replace(/^\/+/, '')
+      return [base, `${base}**`, `/${base}`, `/${base}**`]
+    } else {
+      const base = p.replace(/^\/+/, '')
+      return [base, `/${base}`]
+    }
+  }
+
+  return paths.filter(p => !variants(p).some(v => lineSet.has(v)))
 }
 
 function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolean {
