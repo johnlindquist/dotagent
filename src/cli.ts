@@ -329,20 +329,25 @@ async function main() {
       if (!isDryRun && exportedPaths.length > 0) {
         let shouldUpdateGitignore = false
         
+        // Check if there are actually new patterns to add
+        const hasNewPatterns = checkForNewGitignorePatterns(outputDir, exportedPaths)
+        
         if (values['gitignore']) {
           // --gitignore flag: automatically update gitignore (answer yes)
           shouldUpdateGitignore = true
           console.log(color.info('Updating .gitignore (auto-enabled by --gitignore flag)'))
-        } else if (!values['no-gitignore']) {
-          // Default behavior: ask user
+        } else if (!values['no-gitignore'] && hasNewPatterns) {
+          // Default behavior: ask user only if there are new patterns
           console.log()
           shouldUpdateGitignore = await confirm('Add exported files to .gitignore?', true)
         }
-        // If --no-gitignore is specified, shouldUpdateGitignore remains false
+        // If --no-gitignore is specified or no new patterns, shouldUpdateGitignore remains false
 
         if (shouldUpdateGitignore) {
-          updateGitignoreWithPaths(outputDir, exportedPaths)
-          console.log(color.success('Updated .gitignore'))
+          const wasUpdated = updateGitignoreWithPaths(outputDir, exportedPaths)
+          if (wasUpdated) {
+            console.log(color.success('Updated .gitignore'))
+          }
         }
       }
       break
@@ -458,7 +463,42 @@ async function main() {
   }
 }
 
-function updateGitignoreWithPaths(repoPath: string, paths: string[]): void {
+function filterNewPatterns(content: string, paths: string[]): string[] {
+  const lines = content
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l && !l.startsWith('#'))
+
+  const lineSet = new Set(lines)
+
+  const variants = (p: string): string[] => {
+    if (p.endsWith('/')) {
+      const base = p.replace(/^\/+/, '')
+      return [base, `${base}**`, `/${base}`, `/${base}**`]
+    } else {
+      const base = p.replace(/^\/+/, '')
+      return [base, `/${base}`]
+    }
+  }
+
+  return paths.filter(p => !variants(p).some(v => lineSet.has(v)))
+}
+
+function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolean {
+  const gitignorePath = join(repoPath, '.gitignore')
+  
+  // If gitignore doesn't exist, all patterns are new
+  if (!existsSync(gitignorePath)) {
+    return paths.length > 0
+  }
+  
+  const content = readFileSync(gitignorePath, 'utf-8')
+  const newPatterns = filterNewPatterns(content, paths)
+  
+  return newPatterns.length > 0
+}
+
+function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
   const patterns = [
@@ -472,16 +512,16 @@ function updateGitignoreWithPaths(repoPath: string, paths: string[]): void {
     const content = readFileSync(gitignorePath, 'utf-8')
     
     // Check if any of the patterns already exist
-    const newPatterns = paths.filter(p => {
-      const pattern = p.endsWith('/') ? p + '**' : p
-      return !content.includes(pattern)
-    })
+    const newPatterns = filterNewPatterns(content, paths)
     
     if (newPatterns.length > 0) {
       appendFileSync(gitignorePath, patterns)
+      return true
     }
+    return false
   } else {
     writeFileSync(gitignorePath, patterns.trim() + '\n')
+    return true
   }
 }
 
