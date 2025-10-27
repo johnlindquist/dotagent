@@ -154,6 +154,21 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for AGENTS.md (OpenCode)
+  const opencodeMd = join(repoPath, 'AGENTS.md')
+  if (existsSync(opencodeMd)) {
+    try {
+      results.push(importOpenCode(opencodeMd))
+    } catch (e) {
+      errors.push({ file: opencodeMd, error: String(e) })
+    }
+  }
+  
+  // Check for AGENTS.md (OpenAI Codex) - Note: This conflicts with OpenCode,
+  // so we need to handle this carefully. For now, we'll prioritize OpenAI Codex
+  // since it was implemented first, but this could be made configurable.
+  // Users can explicitly specify the format using the CLI if needed.
+  
   // Check for GEMINI.md (Gemini CLI)
   const geminiMd = join(repoPath, 'GEMINI.md')
   if (existsSync(geminiMd)) {
@@ -647,6 +662,33 @@ export function importClaudeCode(filePath: string): ImportResult {
   
   return {
     format: 'claude',
+    filePath,
+    rules,
+    raw: content
+  }
+}
+
+export function importOpenCode(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'opencode-agents',
+    alwaysApply: true,
+    description: 'OpenCode agents and instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
+  const rules: RuleBlock[] = [{
+    metadata,
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'opencode',
     filePath,
     rules,
     raw: content
