@@ -259,6 +259,26 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
     }
   }
   
+  // Check for WARP.md
+  const warpMd = join(repoPath, 'WARP.md')
+  if (existsSync(warpMd)) {
+    try {
+      results.push(importWarp(warpMd))
+    } catch (e) {
+      errors.push({ file: warpMd, error: String(e) })
+    }
+  }
+  
+  // Check for local WARP.md
+  const warpLocalMd = join(repoPath, 'WARP.local.md')
+  if (existsSync(warpLocalMd)) {
+    try {
+      results.push(importWarp(warpLocalMd))
+    } catch (e) {
+      errors.push({ file: warpLocalMd, error: String(e) })
+    }
+  }
+  
   return { results, errors }
 }
 
@@ -777,10 +797,13 @@ export function importAmazonQ(rulesDir: string): ImportResult {
         if (segments[0] === 'private') segments = segments.slice(1)
         const defaultId = segments.join('/')
         
+        // Normalize path for description (use forward slashes)
+        const normalizedRelPath = relPath.replace(/\\/g, '/')
+        
         const metadata: any = {
           id: `amazonq-${defaultId}`,
           alwaysApply: true,
-          description: `Amazon Q rules from ${relPath}`
+          description: `Amazon Q rules from ${normalizedRelPath}`
         }
         
         if (isPrivateFile) {
@@ -893,7 +916,34 @@ export function importJunie(filePath: string): ImportResult {
   }]
   
   return {
-    format: 'junie' as any,
+    format: 'junie',
+    filePath,
+    rules,
+    raw: content
+  }
+}
+
+export function importWarp(filePath: string): ImportResult {
+  const content = readFileSync(filePath, 'utf-8')
+  const isPrivateFile = isPrivateRule(filePath)
+  
+  const metadata: any = {
+    id: 'warp-rules',
+    alwaysApply: true,
+    description: 'Warp.dev terminal rules and instructions'
+  }
+  
+  if (isPrivateFile) {
+    metadata.private = true
+  }
+  
+  const rules: RuleBlock[] = [{
+    metadata,
+    content: content.trim()
+  }]
+  
+  return {
+    format: 'warp',
     filePath,
     rules,
     raw: content

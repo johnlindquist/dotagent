@@ -10,3 +10,18 @@ coverage/
 .vitest/
 .cursor
 .claude
+# Added by dotagent: ignore exported AI rule files
+.github/copilot-instructions.md
+.cursor/rules/**
+.clinerules
+.windsurfrules
+.rules
+AGENTS.md
+CONVENTIONS.md
+CLAUDE.md
+GEMINI.md
+best_practices.md
+.amazonq/
+.junie/
+.roo/
+WARP.md
