@@ -543,6 +543,28 @@ export function exportToJunie(rules: RuleBlock[], outputDir: string, options?: E
   writeFileSync(filePath, fullContent, 'utf-8')
 }
 
+export function exportToWarp(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const conditionalSection = generateConditionalRulesSection(filteredRules, dirname(outputPath))
+  
+  const mainContent = alwaysApplyRules
+    .map(rule => {
+      const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
+      return header + rule.content
+    })
+    .join('\n\n')
+  
+  const fullContent = conditionalSection
+    ? `${mainContent}\n\n${conditionalSection}`
+    : mainContent
+
+  ensureDirectoryExists(outputPath)
+  writeFileSync(outputPath, fullContent, 'utf-8')
+}
+
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: false }): void {
   // Export to all supported formats
   if (!dryRun) {
@@ -561,6 +583,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToAmazonQ(rules, repoPath, options)
     exportToRoo(rules, repoPath, options)
     exportToJunie(rules, repoPath, options)
+    exportToWarp(rules, join(repoPath, 'WARP.md'), options)
   }
 }
 

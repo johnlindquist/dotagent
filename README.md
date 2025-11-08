@@ -1,6 +1,6 @@
 # dotagent
 
-Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across Claude Code, VS Code Copilot, Cursor, Cline, Windsurf, Zed, Amazon Q Developer, and more.
+Multi-file AI agent configuration manager with .agent directory support. Maintain a single source of truth for AI coding assistant rules across multiple IDEs and tools including VS Code Copilot, Cursor, Claude Code, OpenCode, and more.
 
 ## Features
 
@@ -33,6 +33,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Amazon Q Developer | `.amazonq/rules/*.md`                 | Plain Markdown                 | amazonq  |
 | JetBrains Junie    | `.junie/guidelines.md`                | Plain Markdown                 | junie    |
 | Roo Code           | `.roo/rules/*.md`                     | Markdown with YAML frontmatter | roo      |
+| Warp.dev           | `WARP.md`                             | Plain Markdown                 | warp     |
 
 ## Installation
 
@@ -103,7 +104,7 @@ dotagent convert my-rules.md -f cursor
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--help` | `-h` | Show help message |
-| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo\|opencode) |
+| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo\|opencode\|warp) |
 | `--formats` | | Export to multiple formats (comma-separated list) |
 | `--output` | `-o` | Output directory path |
 | `--overwrite` | `-w` | Overwrite existing files |
@@ -223,6 +224,7 @@ Confidential requirements
 | Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
 | Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
 | Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
+| Warp.dev | `WARP.md`                         | `WARP.local.md`                       |
 
 ### CLI Options
 
@@ -255,6 +257,7 @@ CLAUDE.local.md
 GEMINI.local.md
 .junie/guidelines.local.md
 .roo/rules/*.local.md
+WARP.local.md
 ```
 
 ## Programmatic Usage
@@ -323,6 +326,7 @@ interface RuleMetadata {
 - `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
 - `importJunie(filePath: string): ImportResult` - Import JetBrains Junie guidelines
 - `importRoo(rulesDir: string): ImportResult` - Import Roo Code rules
+- `importWarp(filePath: string): ImportResult` - Import Warp.dev rules
 
 ### Export Functions
 
@@ -340,6 +344,7 @@ interface RuleMetadata {
 - `exportToQodo(rules: RuleBlock[], outputPath: string): void`
 - `exportToJunie(rules: RuleBlock[], outputPath: string): void`
 - `exportToRoo(rules: RuleBlock[], outputDir: string): void`
+- `exportToWarp(rules: RuleBlock[], outputPath: string): void`
 
 ## Development
 

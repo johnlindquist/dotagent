@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode } from './index.js'
+import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode, importWarp, exportToWarp } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -42,7 +42,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie|opencode)
+  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie|opencode|warp)
   ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
@@ -108,7 +108,8 @@ async function main() {
           'AGENTS.md',
           'CLAUDE.md',
           'GEMINI.md',
-          'best_practices.md'
+          'best_practices.md',
+          'WARP.md'
         ]))
       } else {
         console.log(color.success(`Found ${color.number(results.length.toString())} rule file(s):`))
@@ -180,7 +181,6 @@ async function main() {
       }
 
       const outputDir = values.output || repoPath
-      
       const exportFormats = [
         { name: 'All formats', value: 'all' },
         { name: 'VS Code Copilot (.github/copilot-instructions.md)', value: 'copilot' },
@@ -195,7 +195,8 @@ async function main() {
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
         { name: 'Roo Code (.roo/rules/)', value: 'roo' },
         { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' },
-        { name: 'OpenCode (AGENTS.md)', value: 'opencode' }
+        { name: 'OpenCode (AGENTS.md)', value: 'opencode' },
+        { name: 'Warp.dev (WARP.md)', value: 'warp' }
       ]
 
       // Handle format parameter or show interactive menu
@@ -207,6 +208,9 @@ async function main() {
       } else if (values.format) {
         // Single format from -f flag
         selectedFormats = [values.format]
+      } else if (isDryRun) {
+        // In dry-run mode, default to 'all' to avoid hanging on prompt
+        selectedFormats = ['all']
       } else {
         // Interactive menu
         console.log()
@@ -215,7 +219,7 @@ async function main() {
       }
 
       // Validate formats
-      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode']
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode', 'warp']
       const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
       if (invalidFormats.length > 0) {
         console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
@@ -235,8 +239,21 @@ async function main() {
         if (selectedFormat === 'all') {
           if (!isDryRun) {
             exportAll(rules, outputDir, false, options)
+            console.log(color.success('Exported to all formats'))
+          } else {
+            console.log(color.info('Would export to:'))
+            console.log(color.dim('  - .github/copilot-instructions.md'))
+            console.log(color.dim('  - .cursor/rules/'))
+            console.log(color.dim('  - .clinerules'))
+            console.log(color.dim('  - .windsurfrules'))
+            console.log(color.dim('  - .rules'))
+            console.log(color.dim('  - AGENTS.md'))
+            console.log(color.dim('  - CONVENTIONS.md'))
+            console.log(color.dim('  - CLAUDE.md'))
+            console.log(color.dim('  - GEMINI.md'))
+            console.log(color.dim('  - best_practices.md'))
+            console.log(color.dim('  - WARP.md'))
           }
-          console.log(color.success('Exported to all formats'))
           exportedPaths.push(
             '.github/copilot-instructions.md',
             '.cursor/rules/',
@@ -247,7 +264,8 @@ async function main() {
             'CONVENTIONS.md',
             'CLAUDE.md',
             'GEMINI.md',
-            'best_practices.md'
+            'best_practices.md',
+            'WARP.md'
           )
         } else {
           // Export to specific format
@@ -319,10 +337,19 @@ async function main() {
               exportPath = join(outputDir, '.junie/guidelines.md')
               exportedPaths.push('.junie/guidelines.md')
               break
+            case 'warp':
+              exportPath = join(outputDir, 'WARP.md')
+              if (!isDryRun) exportToWarp(rules, exportPath, options)
+              exportedPaths.push('WARP.md')
+              break
           }
           
           if (exportPath) {
-            console.log(color.success(`Exported to: ${color.path(exportPath)}`))
+            if (isDryRun) {
+              console.log(color.info(`Would export to: ${color.path(exportPath)}`))
+            } else {
+              console.log(color.success(`Exported to: ${color.path(exportPath)}`))
+            }
           }
         }
       }
@@ -387,9 +414,10 @@ async function main() {
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
         else if (inputPath.includes('.roo/rules')) format = 'roo'
+        else if (inputPath.endsWith('WARP.md')) format = 'warp'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode|warp)'))
           process.exit(1)
         }
       }
@@ -398,7 +426,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo, importWarp } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -437,6 +465,9 @@ async function main() {
           break
         case 'roo':
           result = importRoo(inputPath)
+          break
+        case 'warp':
+          result = importWarp(inputPath)
           break
         default:
           console.error(color.error(`Unknown format: ${format}`))
@@ -550,7 +581,8 @@ function updateGitignore(repoPath: string): void {
     'AGENTS.local.md',
     'CONVENTIONS.local.md',
     'CLAUDE.local.md',
-    'GEMINI.local.md'
+    'GEMINI.local.md',
+    'WARP.local.md'
   ].join('\n')
   
   if (existsSync(gitignorePath)) {

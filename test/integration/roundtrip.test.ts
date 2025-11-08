@@ -129,6 +129,7 @@ describe('agentconfig integration – import ▶ convert ▶ export ▶ re‑imp
     expect(formats).toContain('zed');
     expect(formats).toContain('codex');
     expect(formats).toContain('opencode');
+    expect(formats).toContain('warp');
     expect(formats).toContain('amazonq');
   });
 

@@ -1,3 +1,5 @@
+export type Format = 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'roo' | 'junie' | 'opencode' | 'warp' | 'unknown'
+
 export interface RuleMetadata {
   id: string
   alwaysApply?: boolean
@@ -21,7 +23,7 @@ export interface RuleBlock {
 }
 
 export interface ImportResult {
-  format: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'roo' | 'junie' | 'opencode' | 'unknown'
+  format: Format
   filePath: string
   rules: RuleBlock[]
   raw?: string
@@ -33,7 +35,7 @@ export interface ImportResults {
 }
 
 export interface ExportOptions {
-  format?: 'agent' | 'copilot' | 'cursor' | 'cline' | 'windsurf' | 'zed' | 'codex' | 'aider' | 'claude' | 'qodo' | 'gemini' | 'amazonq' | 'roo' | 'junie' | 'opencode'
+  format?: Format
   outputPath?: string
   overwrite?: boolean
   includePrivate?: boolean // Include private rules in export
