@@ -26,7 +26,7 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Windsurf           | `.windsurfrules`                      | Plain Markdown                 | windsurf |
 | Zed                | `.rules`                              | Plain Markdown                 | zed      |
 | OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
-| OpenCode           | `AGENTS.md`                          | Plain Markdown                 | opencode |
+| OpenCode           | `AGENTS.md`                           | Plain Markdown                 | opencode |
 | Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
 | Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
 | Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
@@ -101,18 +101,18 @@ dotagent convert my-rules.md -f cursor
 
 ### CLI Flags Reference
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--help` | `-h` | Show help message |
+| Flag                | Short | Description                                                                                                                     |
+| ------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `--help`            | `-h`  | Show help message                                                                                                               |
 | `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo\|opencode\|warp) |
-| `--formats` | | Export to multiple formats (comma-separated list) |
-| `--output` | `-o` | Output directory path |
-| `--overwrite` | `-w` | Overwrite existing files |
-| `--dry-run` | `-d` | Preview operations without making changes |
-| `--include-private` | | Include private rules in export |
-| `--skip-private` | | Skip private rules during import |
-| `--gitignore` | | Auto-update gitignore (skip prompt) |
-| `--no-gitignore` | | Skip gitignore update prompt |
+| `--formats`         |       | Export to multiple formats (comma-separated list)                                                                               |
+| `--output`          | `-o`  | Output directory path                                                                                                           |
+| `--overwrite`       | `-w`  | Overwrite existing files                                                                                                        |
+| `--dry-run`         | `-d`  | Preview operations without making changes                                                                                       |
+| `--include-private` |       | Include private rules in export                                                                                                 |
+| `--skip-private`    |       | Skip private rules during import                                                                                                |
+| `--gitignore`       |       | Auto-update gitignore (skip prompt)                                                                                             |
+| `--no-gitignore`    |       | Skip gitignore update prompt                                                                                                    |
 
 ## Unified Format
 
@@ -169,14 +169,16 @@ scope: src/components/**
 ## Private Rules
 
 DotAgent supports private/local rules that are automatically excluded from exports and version control. This is useful for:
+
 - Personal preferences that shouldn't be shared with the team
-- Client-specific requirements  
+- Client-specific requirements
 - Temporary experimental rules
 - Sensitive information or internal processes
 
 ### Naming Convention
 
 Private rules are identified by:
+
 1. **Filename suffix**: `*.local.md` (e.g., `api-keys.local.md`)
 2. **Directory**: Files in `/private/` subdirectories
 3. **Frontmatter**: `private: true` in YAML frontmatter
@@ -184,29 +186,32 @@ Private rules are identified by:
 ### Examples
 
 ```markdown
-<!-- .agent/team-rules.md (PUBLIC) -->
----
-id: team-rules
----
+## <!-- .agent/team-rules.md (PUBLIC) -->
+
+## id: team-rules
+
 # Team Standards
+
 Shared team guidelines
 ```
 
 ```markdown
-<!-- .agent/my-preferences.local.md (PRIVATE) -->
----
-id: my-preferences
----
+## <!-- .agent/my-preferences.local.md (PRIVATE) -->
+
+## id: my-preferences
+
 # My Personal Preferences
+
 These won't be exported
 ```
 
 ```markdown
-<!-- .agent/private/client-specific.md (PRIVATE) -->
----
-id: client-rules
----
+## <!-- .agent/private/client-specific.md (PRIVATE) -->
+
+## id: client-rules
+
 # Client-Specific Rules
+
 Confidential requirements
 ```
 
@@ -220,11 +225,11 @@ Confidential requirements
 | Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
 | Zed      | `.rules`                          | `.rules.local`                          |
 | Claude   | `CLAUDE.md`                       | `CLAUDE.local.md`                       |
-| OpenCode | `AGENTS.md`                      | `AGENTS.local.md`                |
+| OpenCode | `AGENTS.md`                       | `AGENTS.local.md`                       |
 | Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
 | Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
-| Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
-| Warp.dev | `WARP.md`                         | `WARP.local.md`                       |
+| Roo Code | `.roo/rules/*.md`                 | `.roo/rules/*.local.md`                 |
+| Warp.dev | `WARP.md`                         | `WARP.local.md`                         |
 
 ### CLI Options
 
@@ -263,24 +268,19 @@ WARP.local.md
 ## Programmatic Usage
 
 ```typescript
-import { 
-  importAll, 
-  importAgent,
-  exportToAgent,
-  exportAll 
-} from 'dotagent'
+import { importAll, importAgent, exportToAgent, exportAll } from "dotagent";
 
 // Import all rules from a repository
-const { results, errors } = await importAll('/path/to/repo')
+const { results, errors } = await importAll("/path/to/repo");
 
 // Import from .agent directory
-const { rules } = await importAgent('/path/to/repo/.agent')
+const { rules } = await importAgent("/path/to/repo/.agent");
 
 // Export to .agent directory
-await exportToAgent(rules, '/path/to/repo')
+await exportToAgent(rules, "/path/to/repo");
 
 // Export to all formats
-exportAll(rules, '/path/to/repo')
+exportAll(rules, "/path/to/repo");
 ```
 
 ## API Reference
@@ -289,20 +289,20 @@ exportAll(rules, '/path/to/repo')
 
 ```typescript
 interface RuleBlock {
-  metadata: RuleMetadata
-  content: string
-  position?: Position
+  metadata: RuleMetadata;
+  content: string;
+  position?: Position;
 }
 
 interface RuleMetadata {
-  id: string
-  alwaysApply?: boolean
-  scope?: string | string[]
-  triggers?: string[]
-  manual?: boolean
-  priority?: 'high' | 'medium' | 'low'
-  description?: string
-  [key: string]: unknown
+  id: string;
+  alwaysApply?: boolean;
+  scope?: string | string[];
+  triggers?: string[];
+  manual?: boolean;
+  priority?: "high" | "medium" | "low";
+  description?: string;
+  [key: string]: unknown;
 }
 ```
 
