@@ -517,6 +517,61 @@ export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: Exp
   }
 }
 
+export function exportToKilocode(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
+  const rulesDir = join(outputDir, '.kilocode', 'rules')
+  mkdirSync(rulesDir, { recursive: true })
+
+  // Filter out private rules unless includePrivate is true
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+  
+  for (const rule of filteredRules) {
+    // Support nested folders based on rule ID
+    let filePath: string
+    
+    if (rule.metadata.id && rule.metadata.id.includes('/')) {
+      // Create nested structure based on ID
+      const parts = rule.metadata.id.split('/')
+      const fileName = parts.pop() + '.md'
+      const subDir = join(rulesDir, ...parts)
+      mkdirSync(subDir, { recursive: true })
+      filePath = join(subDir, fileName)
+    } else {
+      const filename = `${rule.metadata.id || 'rule'}.md`
+      filePath = join(rulesDir, filename)
+    }
+
+    // Prepare front matter data - filter out undefined and null values
+    // Order matters for consistent output and test expectations
+    const frontMatterBase: Record<string, unknown> = {}
+
+    // Add fields in deterministic order: alwaysApply, description, scope, globs, manual, priority, triggers
+    if (rule.metadata.alwaysApply !== undefined) frontMatterBase.alwaysApply = rule.metadata.alwaysApply
+    if (rule.metadata.description !== undefined && rule.metadata.description !== null) frontMatterBase.description = rule.metadata.description
+    if (rule.metadata.scope !== undefined && rule.metadata.scope !== null) frontMatterBase.scope = rule.metadata.scope
+    if (rule.metadata.globs !== undefined && rule.metadata.globs !== null) frontMatterBase.globs = rule.metadata.globs
+    if (rule.metadata.manual !== undefined && rule.metadata.manual !== null) frontMatterBase.manual = rule.metadata.manual
+    if (rule.metadata.priority !== undefined && rule.metadata.priority !== null) frontMatterBase.priority = rule.metadata.priority
+    if (rule.metadata.triggers !== undefined && rule.metadata.triggers !== null) frontMatterBase.triggers = rule.metadata.triggers
+
+    // Add other metadata fields but exclude 'private' if it's false or null
+    for (const [key, value] of Object.entries(rule.metadata)) {
+      if (!['id', 'alwaysApply', 'description', 'scope', 'globs', 'manual', 'priority', 'triggers'].includes(key) && value !== undefined && value !== null) {
+        // Don't include private: false in frontmatter
+        if (key === 'private' && value === false) continue
+        frontMatterBase[key] = value
+      }
+    }
+
+    const frontMatter = frontMatterBase
+
+    // Create Markdown content with frontmatter
+    // Ensure content starts with newline for proper frontmatter formatting
+    const content = rule.content.startsWith('\n') ? rule.content : '\n' + rule.content
+    const mdContent = matter.stringify(content, frontMatter, grayMatterOptions)
+    writeFileSync(filePath, mdContent, 'utf-8')
+  }
+}
+
 export function exportToJunie(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const junieDir = join(outputDir, '.junie')
   mkdirSync(junieDir, { recursive: true })
@@ -560,6 +615,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)
     exportToAmazonQ(rules, repoPath, options)
     exportToRoo(rules, repoPath, options)
+    exportToKilocode(rules, repoPath, options)
     exportToJunie(rules, repoPath, options)
   }
 }

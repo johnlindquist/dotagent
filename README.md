@@ -19,20 +19,21 @@ Multi-file AI agent configuration manager with .agent directory support. Maintai
 | Tool/IDE           | Rule File                             | Format                         | Slug     |
 | ------------------ | ------------------------------------- | ------------------------------ | -------- |
 | Agent (dotagent)   | `.agent/**/*.md`                      | Markdown with YAML frontmatter | agent    |
+| Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
+| Amazon Q Developer | `.amazonq/rules/*.md`                 | Plain Markdown                 | amazonq  |
 | Claude Code        | `CLAUDE.md`                           | Plain Markdown                 | claude   |
+| Cline              | `.clinerules` or `.clinerules/*.md`   | Plain Markdown                 | cline    |
 | VS Code (Copilot)  | `.github/copilot-instructions.md`     | Plain Markdown                 | copilot  |
 | Cursor             | `.cursor/**/*.mdc`, `.cursor/**/*.md` | Markdown with YAML frontmatter | cursor   |
-| Cline              | `.clinerules` or `.clinerules/*.md`   | Plain Markdown                 | cline    |
+| Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
+| JetBrains Junie    | `.junie/guidelines.md`                | Plain Markdown                 | junie    |
+| KiloCode           | `.kilocode/rules/*.md`                | Markdown with YAML frontmatter | kilocode |
+| OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
+| OpenCode           | `AGENTS.md`                           | Plain Markdown                 | opencode |
+| Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
+| Roo Code           | `.roo/rules/*.md`                     | Markdown with YAML frontmatter | roo      |
 | Windsurf           | `.windsurfrules`                      | Plain Markdown                 | windsurf |
 | Zed                | `.rules`                              | Plain Markdown                 | zed      |
-| OpenAI Codex       | `AGENTS.md`                           | Plain Markdown                 | codex    |
-| OpenCode           | `AGENTS.md`                          | Plain Markdown                 | opencode |
-| Aider              | `CONVENTIONS.md`                      | Plain Markdown                 | aider    |
-| Gemini             | `GEMINI.md`                           | Plain Markdown                 | gemini   |
-| Qodo               | `best_practices.md`                   | Plain Markdown                 | qodo     |
-| Amazon Q Developer | `.amazonq/rules/*.md`                 | Plain Markdown                 | amazonq  |
-| JetBrains Junie    | `.junie/guidelines.md`                | Plain Markdown                 | junie    |
-| Roo Code           | `.roo/rules/*.md`                     | Markdown with YAML frontmatter | roo      |
 
 ## Installation
 
@@ -100,18 +101,18 @@ dotagent convert my-rules.md -f cursor
 
 ### CLI Flags Reference
 
-| Flag | Short | Description |
-|------|-------|-------------|
-| `--help` | `-h` | Show help message |
-| `--format`          | `-f`  | Export to single format (copilot\|cursor\|cline\|windsurf\|zed\|codex\|aider\|claude\|gemini\|qodo\|junie\|roo\|opencode) |
-| `--formats` | | Export to multiple formats (comma-separated list) |
-| `--output` | `-o` | Output directory path |
-| `--overwrite` | `-w` | Overwrite existing files |
-| `--dry-run` | `-d` | Preview operations without making changes |
-| `--include-private` | | Include private rules in export |
-| `--skip-private` | | Skip private rules during import |
-| `--gitignore` | | Auto-update gitignore (skip prompt) |
-| `--no-gitignore` | | Skip gitignore update prompt |
+| Flag                | Short | Description                                                                                                                                         |
+|---------------------|-------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--help`            | `-h`  | Show help message                                                                                                                                   |
+| `--format`          | `-f`  | Export to single format (agent\|aider\|amazonq\|claude\|cline\|codex\|copilot\|cursor\|gemini\|junie\|kilocode\|opencode\|qodo\|roo\|windsurf\|zed) |
+| `--formats`         |       | Export to multiple formats (comma-separated list)                                                                                                   |
+| `--output`          | `-o`  | Output directory path                                                                                                                               |
+| `--overwrite`       | `-w`  | Overwrite existing files                                                                                                                            |
+| `--dry-run`         | `-d`  | Preview operations without making changes                                                                                                           |
+| `--include-private` |       | Include private rules in export                                                                                                                     |
+| `--skip-private`    |       | Skip private rules during import                                                                                                                    |
+| `--gitignore`       |       | Auto-update gitignore (skip prompt)                                                                                                                 |
+| `--no-gitignore`    |       | Skip gitignore update prompt                                                                                                                        |
 
 ## Unified Format
 
@@ -168,6 +169,7 @@ scope: src/components/**
 ## Private Rules
 
 DotAgent supports private/local rules that are automatically excluded from exports and version control. This is useful for:
+
 - Personal preferences that shouldn't be shared with the team
 - Client-specific requirements  
 - Temporary experimental rules
@@ -176,6 +178,7 @@ DotAgent supports private/local rules that are automatically excluded from expor
 ### Naming Convention
 
 Private rules are identified by:
+
 1. **Filename suffix**: `*.local.md` (e.g., `api-keys.local.md`)
 2. **Directory**: Files in `/private/` subdirectories
 3. **Frontmatter**: `private: true` in YAML frontmatter
@@ -215,14 +218,15 @@ Confidential requirements
 | -------- | --------------------------------- | --------------------------------------- |
 | Copilot  | `.github/copilot-instructions.md` | `.github/copilot-instructions.local.md` |
 | Cursor   | `.cursor/rules/*.mdc`             | `.cursor/rules/*.local.mdc`             |
-| Cline    | `.clinerules`                     | `.clinerules.local`                     |
-| Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
-| Zed      | `.rules`                          | `.rules.local`                          |
 | Claude   | `CLAUDE.md`                       | `CLAUDE.local.md`                       |
-| OpenCode | `AGENTS.md`                      | `AGENTS.local.md`                |
+| Cline    | `.clinerules`                     | `.clinerules.local`                     |
 | Gemini   | `GEMINI.md`                       | `GEMINI.local.md`                       |
 | Junie    | `.junie/guidelines.md`            | `.junie/guidelines.local.md`            |
-| Roo Code | `.roo/rules/*.md`                | `.roo/rules/*.local.md`               |
+| KiloCode | `.kilocode/rules/*.md`            | `.kilocode/rules/*.local.md`            |
+| OpenCode | `AGENTS.md`                       | `AGENTS.local.md`                       |
+| Roo Code | `.roo/rules/*.md`                 | `.roo/rules/*.local.md`                 |
+| Windsurf | `.windsurfrules`                  | `.windsurfrules.local`                  |
+| Zed      | `.rules`                          | `.rules.local`                          |
 
 ### CLI Options
 
@@ -247,14 +251,15 @@ When you run `dotagent export`, it automatically updates your `.gitignore` with 
 .cursor/rules-private/**
 .clinerules.local
 .clinerules/private/**
-.windsurfrules.local
+.junie/guidelines.local.md
+.kilocode/rules/*.local.md
+.roo/rules/*.local.md
 .rules.local
+.windsurfrules.local
 AGENTS.local.md
 CONVENTIONS.local.md
 CLAUDE.local.md
 GEMINI.local.md
-.junie/guidelines.local.md
-.roo/rules/*.local.md
 ```
 
 ## Programmatic Usage
@@ -311,35 +316,41 @@ interface RuleMetadata {
 ### Import Functions
 
 - `importAll(repoPath: string): Promise<ImportResults>` - Auto-detect and import all formats
+- `importAider(filePath: string): ImportResult` - Import Aider CLI conventions
+- `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
+- `importClaudeCode(filePath: string): ImportResult` - Import Claude Code context and instructions
+- `importCline(rulesPath: string): ImportResult` - Import Cline rules
+- `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
 - `importCopilot(filePath: string): ImportResult` - Import VS Code Copilot format
 - `importCursor(rulesDir: string): ImportResult` - Import Cursor MDC files
-- `importCline(rulesPath: string): ImportResult` - Import Cline rules
+- `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
+- `importJunie(filePath: string): ImportResult` - Import JetBrains Junie guidelines
+- `importKilocode(rulesDir: string): ImportResult` - Import KiloCode rules
+- `importOpenCode(filePath: string): ImportResult` - Import OpenCode format
+- `importQodo(filePath: string): ImportResult` - Import Qodo best practices
+- `importRoo(rulesDir: string): ImportResult` - Import Roo Code rules
 - `importWindsurf(filePath: string): ImportResult` - Import Windsurf rules
 - `importZed(filePath: string): ImportResult` - Import Zed rules
-- `importCodex(filePath: string): ImportResult` - Import OpenAI Codex format
-- `importOpenCode(filePath: string): ImportResult` - Import OpenCode format
-- `importGemini(filePath: string): ImportResult` - Import Gemini CLI format
-- `importQodo(filePath: string): ImportResult` - Import Qodo best practices
-- `importAmazonQ(rulesDir: string): ImportResult` - Import Amazon Q Developer rules
-- `importJunie(filePath: string): ImportResult` - Import JetBrains Junie guidelines
-- `importRoo(rulesDir: string): ImportResult` - Import Roo Code rules
 
 ### Export Functions
 
 - `toAgentMarkdown(rules: RuleBlock[]): string` - Convert to unified format
 - `exportAll(rules: RuleBlock[], repoPath: string): void` - Export to all formats
-- `exportToCopilot(rules: RuleBlock[], outputPath: string): void`
-- `exportToCursor(rules: RuleBlock[], outputDir: string): void`
-- `exportToCline(rules: RuleBlock[], outputPath: string): void`
-- `exportToWindsurf(rules: RuleBlock[], outputPath: string): void`
-- `exportToZed(rules: RuleBlock[], outputPath: string): void`
-- `exportToCodex(rules: RuleBlock[], outputPath: string): void`
-- `exportToOpenCode(rules: RuleBlock[], outputPath: string): void`
-- `exportToAmazonQ(rules: RuleBlock[], outputDir: string): void`
-- `exportToGemini(rules: RuleBlock[], outputPath: string): void`
-- `exportToQodo(rules: RuleBlock[], outputPath: string): void`
-- `exportToJunie(rules: RuleBlock[], outputPath: string): void`
-- `exportToRoo(rules: RuleBlock[], outputDir: string): void`
+- `exportToAider(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void`
+- `exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToCline(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToCopilot(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToCursor(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void`
+- `exportToGemini(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToJunie(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void`
+- `exportToKilocode(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void`
+- `exportToOpenCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToQodo(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToRoo(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void`
+- `exportToWindsurf(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
+- `exportToZed(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void`
 
 ## Development
 

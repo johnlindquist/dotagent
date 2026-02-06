@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode } from './index.js'
+import { importAgent, importAll, importKilocode, importOpenCode, importRoo, exportAll, exportToAgent, exportToAider, exportToClaudeCode, exportToCline, exportToCodex, exportToCopilot, exportToCursor, exportToGemini, exportToJunie, exportToKilocode, exportToOpenCode, exportToQodo, exportToRoo, exportToWindsurf, exportToZed } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -42,7 +42,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie|opencode)
+  ${color.yellow('-f, --format')}     Specify format (agent|aider|amazonq|claude|cline|codex|copilot|cursor|gemini|junie|kilocode|opencode|qodo|roo|windsurf|zed)
   ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
@@ -195,7 +195,8 @@ async function main() {
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
         { name: 'Roo Code (.roo/rules/)', value: 'roo' },
         { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' },
-        { name: 'OpenCode (AGENTS.md)', value: 'opencode' }
+        { name: 'OpenCode (AGENTS.md)', value: 'opencode' },
+        { name: 'KiloCode (.kilocode/rules/)', value: 'kilocode' }
       ]
 
       // Handle format parameter or show interactive menu
@@ -215,7 +216,7 @@ async function main() {
       }
 
       // Validate formats
-      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode']
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode', 'kilocode']
       const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
       if (invalidFormats.length > 0) {
         console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
@@ -319,6 +320,11 @@ async function main() {
               exportPath = join(outputDir, '.junie/guidelines.md')
               exportedPaths.push('.junie/guidelines.md')
               break
+            case 'kilocode':
+              if (!isDryRun) exportToKilocode(rules, outputDir, options)
+              exportPath = join(outputDir, '.kilocode/rules/')
+              exportedPaths.push('.kilocode/rules/')
+              break
           }
           
           if (exportPath) {
@@ -387,9 +393,10 @@ async function main() {
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
         else if (inputPath.includes('.roo/rules')) format = 'roo'
+        else if (inputPath.includes('.kilocode/rules')) format = 'kilocode'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode|kilocode)'))
           process.exit(1)
         }
       }
@@ -398,7 +405,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo, importKilocode } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -437,6 +444,9 @@ async function main() {
           break
         case 'roo':
           result = importRoo(inputPath)
+          break
+        case 'kilocode':
+          result = importKilocode(inputPath)
           break
         default:
           console.error(color.error(`Unknown format: ${format}`))
