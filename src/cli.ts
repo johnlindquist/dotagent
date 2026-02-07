@@ -96,6 +96,11 @@ async function main() {
         process.exit(1)
       }
 
+      // Debug logging
+      console.log(color.dim(`[DEBUG] Resolved repoPath: ${repoPath}`))
+      console.log(color.dim(`[DEBUG] Current working directory: ${process.cwd()}`))
+      console.log(color.dim(`[DEBUG] .agent directory exists: ${existsSync(join(repoPath, '.agent'))}`))
+
       console.log(header('Importing Rules'))
       console.log(`Scanning: ${color.path(repoPath)}`)
       
@@ -137,10 +142,14 @@ async function main() {
         if (isDryRun) {
           console.log(color.info(`Would export to: ${color.path(agentDir)}`))
           console.log(color.dim(`Total rules: ${allRules.length}`))
+          console.log(color.dim(`[DEBUG] Dry-run mode: .agent directory would NOT be created`))
         } else {
           const outputDir = values.output || repoPath
           exportToAgent(allRules, outputDir)
           console.log(color.success(`Created .agent/ directory with ${color.number(allRules.length.toString())} rule(s)`))
+          console.log(color.dim(`[DEBUG] .agent directory created at: ${agentDir}`))
+          console.log(color.dim(`[DEBUG] outputDir: ${outputDir}`))
+          console.log(color.dim(`[DEBUG] .agent exists after export: ${existsSync(join(outputDir, '.agent'))}`))
         }
       }
 

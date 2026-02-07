@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { exportToAider, exportToClaudeCode, exportToCline, exportToCodex, exportToCopilot, exportToCursor, exportToGemini, exportToJunie, exportToKilocode, exportToOpenCode, exportToQodo, exportToRoo, exportToWindsurf, exportToZed, exportAll } from '../src/exporters.js'
+import { exportToAider, exportToAmazonQ, exportToClaudeCode, exportToCline, exportToCodex, exportToCopilot, exportToCursor, exportToGemini, exportToJunie, exportToKilocode, exportToOpenCode, exportToQodo, exportToRoo, exportToWindsurf, exportToZed, exportAll } from '../src/exporters.js'
 import type { RuleBlock } from '../src/types.js'
 
 describe('Export functionality with format selection', () => {
@@ -157,8 +157,12 @@ describe('Export format selection mapping', () => {
       'opencode': { exporter: exportToOpenCode, path: 'AGENTS.md' },
       'aider': { exporter: exportToAider, path: 'CONVENTIONS.md' },
       'claude': { exporter: exportToClaudeCode, path: 'CLAUDE.md' },
+      'gemini': { exporter: exportToGemini, path: 'GEMINI.md' },
       'qodo': { exporter: exportToQodo, path: 'best_practices.md' },
-      'kilocode': { exporter: exportToKilocode, path: '.kilocode/rules/' }
+      'kilocode': { exporter: exportToKilocode, path: '.kilocode/rules/' },
+      'roo': { exporter: exportToRoo, path: '.roo/rules/' },
+      'junie': { exporter: exportToJunie, path: '.junie/guidelines.md' },
+      'amazonq': { exporter: exportToAmazonQ, path: '.amazonq/rules/' }
     }
     
     Object.entries(formatMap).forEach(([format, config]) => {

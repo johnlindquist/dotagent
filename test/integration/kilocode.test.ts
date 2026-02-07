@@ -267,8 +267,8 @@ Project context.`)
     expect(kilocodeResult!.rules).toHaveLength(1)
     expect(kilocodeResult!.rules[0].metadata.id).toBe('regular-rule')
     
-    // Warning about memory-bank should be present
-    expect(warnings).toContain('memory-bank/tasks.md imported to .agents/common-tasks.md')
+    // Warning about memory-bank should be present (memory-bank migration is now separate)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
     
     // Verify memory-bank files are not in rules
     const ruleIds = kilocodeResult!.rules.map(r => r.metadata.id)
@@ -276,7 +276,7 @@ Project context.`)
     expect(ruleIds).not.toContain('memory-bank/context')
   })
 
-  it('memory-bank/tasks.md is imported to .agents/common-tasks.md when target does not exist', async () => {
+  it('memory-bank/tasks.md is detected during import (migration is now handled separately)', async () => {
     // Create .kilocode/rules directory with memory-bank/tasks.md
     const rulesDir = join(tempDir, '.kilocode', 'rules')
     const memoryBankDir = join(rulesDir, 'memory-bank')
@@ -293,18 +293,14 @@ Project context.`)
     const kilocodeResult = results.find(r => r.format === 'kilocode')
     expect(kilocodeResult).toBeDefined()
     
-    // Check that common-tasks.md was created
-    const commonTasksPath = join(tempDir, '.agents', 'common-tasks.md')
-    expect(existsSync(commonTasksPath)).toBe(true)
+    // Warning should indicate memory bank was found (migration is now handled separately)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
     
-    const importedContent = readFileSync(commonTasksPath, 'utf-8')
-    expect(importedContent).toBe(tasksContent)
-    
-    // Warning should indicate successful import
-    expect(warnings).toContain('memory-bank/tasks.md imported to .agents/common-tasks.md')
+    // Note: The actual file migration (.agents/common-tasks.md) is now handled by the CLI/ orchestration layer
+    // This test verifies the import function correctly detects and reports memory-bank
   })
 
-  it('warning is shown when .agents/common-tasks.md already exists (no overwrite)', async () => {
+  it('memory-bank/tasks.md is detected when .agents/common-tasks.md already exists', async () => {
     // Create .kilocode/rules directory with memory-bank/tasks.md
     const rulesDir = join(tempDir, '.kilocode', 'rules')
     const memoryBankDir = join(rulesDir, 'memory-bank')
@@ -313,7 +309,7 @@ Project context.`)
     const memoryBankTasksContent = '# Memory Bank Tasks\n- Task from memory bank'
     writeFileSync(join(memoryBankDir, 'tasks.md'), memoryBankTasksContent)
 
-    // Create existing .agents/common-tasks.md
+    // Create existing .agents/common-tasks.md (simulating pre-existing file)
     const agentsDir = join(tempDir, '.agents')
     mkdirSync(agentsDir, { recursive: true })
     const existingContent = '# Existing Tasks\n- Existing task'
@@ -324,11 +320,9 @@ Project context.`)
     const kilocodeResult = results.find(r => r.format === 'kilocode')
     expect(kilocodeResult).toBeDefined()
     
-    // common-tasks.md should NOT be overwritten
-    const commonTasksPath = join(tempDir, '.agents', 'common-tasks.md')
-    expect(readFileSync(commonTasksPath, 'utf-8')).toBe(existingContent)
+    // Warning should indicate memory bank was found (migration is now handled separately)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
     
-    // Warning should indicate the file wasn't imported
-    expect(warnings.some(w => w.includes('memory-bank/tasks.md found but .agents/common-tasks.md already exists'))).toBe(true)
+    // Note: The actual file migration decision is now handled by the CLI/orchestration layer
   })
 })

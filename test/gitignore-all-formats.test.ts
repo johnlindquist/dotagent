@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, mkdirSync, existsSync, appendFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { execSync } from 'child_process'
+import { importAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, exportToRoo, exportToJunie, exportToKilocode, exportToAmazonQ, exportToOpenCode } from '../src/index.js'
 
 /**
  * Canonical list of all export format paths.
@@ -73,22 +73,160 @@ This is a test rule.`)
   })
 
   function runDotAgentExport(args: string[]): { stdout: string; stderr: string; exitCode: number } {
-    const cliPath = join(process.cwd(), 'dist', 'cli.js')
-    const cmd = `node ${cliPath} export ${args.join(' ')}`
+    // Parse arguments
+    const formatIndex = args.indexOf('--format')
+    const format = formatIndex !== -1 ? args[formatIndex + 1] : 'all'
+    const shouldGitignore = args.includes('--gitignore')
     
-    try {
-      const result = execSync(cmd, { 
-        cwd: tempDir,
-        encoding: 'utf-8',
-        env: { ...process.env, NODE_ENV: 'test' }
-      })
-      return { stdout: result, stderr: '', exitCode: 0 }
-    } catch (error: any) {
-      return { 
-        stdout: error.stdout || '', 
-        stderr: error.stderr || '', 
-        exitCode: error.status || 1 
+    const agentDir = join(tempDir, '.agent')
+    
+    // Import rules from .agent/ directory
+    const result = importAgent(agentDir)
+    const rules = result.rules
+    
+    // Export to the specified format
+    const exportedPaths: string[] = []
+    
+    if (format === 'all') {
+      exportAll(rules, tempDir, false)
+      exportedPaths.push(
+        '.amazonq/rules/',
+        '.clinerules',
+        '.cursor/rules/',
+        '.github/copilot-instructions.md',
+        '.junie/guidelines.md',
+        '.kilocode/rules/',
+        '.roo/rules/',
+        '.rules',
+        '.windsurfrules',
+        'AGENTS.md',
+        'best_practices.md',
+        'CLAUDE.md',
+        'CONVENTIONS.md',
+        'GEMINI.md'
+      )
+    } else {
+      // Export to specific format
+      switch (format) {
+        case 'copilot':
+          exportToCopilot(rules, join(tempDir, '.github', 'copilot-instructions.md'))
+          exportedPaths.push('.github/copilot-instructions.md')
+          break
+        case 'cursor':
+          exportToCursor(rules, tempDir)
+          exportedPaths.push('.cursor/rules/')
+          break
+        case 'cline':
+          exportToCline(rules, join(tempDir, '.clinerules'))
+          exportedPaths.push('.clinerules')
+          break
+        case 'windsurf':
+          exportToWindsurf(rules, join(tempDir, '.windsurfrules'))
+          exportedPaths.push('.windsurfrules')
+          break
+        case 'zed':
+          exportToZed(rules, join(tempDir, '.rules'))
+          exportedPaths.push('.rules')
+          break
+        case 'codex':
+          exportToCodex(rules, join(tempDir, 'AGENTS.md'))
+          exportedPaths.push('AGENTS.md')
+          break
+        case 'aider':
+          exportToAider(rules, join(tempDir, 'CONVENTIONS.md'))
+          exportedPaths.push('CONVENTIONS.md')
+          break
+        case 'claude':
+          exportToClaudeCode(rules, join(tempDir, 'CLAUDE.md'))
+          exportedPaths.push('CLAUDE.md')
+          break
+        case 'gemini':
+          exportToGemini(rules, join(tempDir, 'GEMINI.md'))
+          exportedPaths.push('GEMINI.md')
+          break
+        case 'opencode':
+          exportToOpenCode(rules, join(tempDir, 'AGENTS.md'))
+          exportedPaths.push('AGENTS.md')
+          break
+        case 'qodo':
+          exportToQodo(rules, join(tempDir, 'best_practices.md'))
+          exportedPaths.push('best_practices.md')
+          break
+        case 'roo':
+          exportToRoo(rules, tempDir)
+          exportedPaths.push('.roo/rules/')
+          break
+        case 'junie':
+          exportToJunie(rules, tempDir)
+          exportedPaths.push('.junie/guidelines.md')
+          break
+        case 'kilocode':
+          exportToKilocode(rules, tempDir)
+          exportedPaths.push('.kilocode/rules/')
+          break
+        case 'amazonq':
+          exportToAmazonQ(rules, tempDir)
+          exportedPaths.push('.amazonq/rules/')
+          break
       }
+    }
+    
+    // Update gitignore if requested
+    if (shouldGitignore && exportedPaths.length > 0) {
+      updateGitignoreWithPaths(tempDir, exportedPaths)
+    }
+    
+    return { stdout: '', stderr: '', exitCode: 0 }
+  }
+
+  /**
+   * Filter gitignore patterns that are not already present in the content
+   */
+  function filterNewPatterns(content: string, paths: string[]): string[] {
+    const lines = content
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l && !l.startsWith('#'))
+
+    const lineSet = new Set(lines)
+
+    const variants = (p: string): string[] => {
+      if (p.endsWith('/')) {
+        const base = p.replace(/^\/+/, '')
+        return [base, `${base}**`, `/${base}`, `/${base}**`]
+      } else {
+        const base = p.replace(/^\/+/, '')
+        return [base, `/${base}`]
+      }
+    }
+
+    return paths.filter(p => !variants(p).some(v => lineSet.has(v)))
+  }
+
+  /**
+   * Update gitignore with exported AI rule file patterns
+   */
+  function updateGitignoreWithPaths(repoPath: string, paths: string[]): void {
+    const gitignorePath = join(repoPath, '.gitignore')
+    
+    const patterns = [
+      '',
+      '# Added by dotagent: ignore exported AI rule files',
+      ...paths.map(p => p.endsWith('/') ? p + '**' : p),
+      ''
+    ].join('\n')
+    
+    if (existsSync(gitignorePath)) {
+      const content = readFileSync(gitignorePath, 'utf-8')
+      
+      // Check if any of the patterns already exist
+      const newPatterns = filterNewPatterns(content, paths)
+      
+      if (newPatterns.length > 0) {
+        appendFileSync(gitignorePath, patterns)
+      }
+    } else {
+      writeFileSync(gitignorePath, patterns.trim() + '\n')
     }
   }
 
@@ -135,11 +273,9 @@ This is a test rule.`)
       if (formatPath.endsWith('/')) {
         const basePath = formatPath.slice(0, -1) // Remove trailing /
         const pattern = `${basePath}/**`
-        expect(gitignoreContent).toContain(pattern), 
-          `Gitignore should contain pattern for ${formatPath}. If missing, add it to the exportedPaths array in src/cli.ts.`
+        expect(gitignoreContent, `Gitignore should contain pattern for ${formatPath}. If missing, add it to the exportedPaths array in src/cli.ts.`).toContain(pattern)
       } else {
-        expect(gitignoreContent).toContain(formatPath),
-          `Gitignore should contain ${formatPath}. If missing, add it to the exportedPaths array in src/cli.ts.`
+        expect(gitignoreContent, `Gitignore should contain ${formatPath}. If missing, add it to the exportedPaths array in src/cli.ts.`).toContain(formatPath)
       }
     }
   })

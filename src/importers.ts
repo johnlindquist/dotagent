@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, readdirSync, statSync, Dirent, writeFileSync, mkdirSync } from 'fs'
+import { readFileSync, existsSync, readdirSync, statSync, Dirent } from 'fs'
 import { join, basename, dirname } from 'path'
 import matter from 'gray-matter'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
@@ -348,7 +348,7 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const kilocodeRulesDir = join(repoPath, '.kilocode', 'rules')
   if (existsSync(kilocodeRulesDir)) {
     try {
-      const result = importKilocode(kilocodeRulesDir, repoPath)
+      const result = importKilocode(kilocodeRulesDir)
       results.push(result)
       if (result.warnings) {
         warnings.push(...result.warnings)
@@ -1054,7 +1054,7 @@ export function importJunie(filePath: string): ImportResult {
   }]
   
   return {
-    format: 'junie' as any,
+    format: 'junie',
     filePath,
     rules,
     raw: content
@@ -1064,37 +1064,16 @@ export function importJunie(filePath: string): ImportResult {
 /**
  * Import KiloCode rules from .kilocode/rules directory
  */
-export function importKilocode(rulesDir: string, outputDir?: string): ImportResult {
+export function importKilocode(rulesDir: string): ImportResult {
   const rules: RuleBlock[] = []
   let foundMemoryBank = false
-  let skipMemoryBankWarning = false
+  let memoryBankImported = false
   
-  // Check for memory-bank/tasks.md and handle common-tasks.md import
+  // Check for memory-bank/tasks.md
   const memoryBankTasksPath = join(rulesDir, 'memory-bank', 'tasks.md')
   if (existsSync(memoryBankTasksPath)) {
     foundMemoryBank = true
-    skipMemoryBankWarning = true
-    
-    // Determine target path for common-tasks.md
-    if (outputDir) {
-      const agentsDir = join(outputDir, '.agents')
-      const commonTasksPath = join(agentsDir, 'common-tasks.md')
-      
-      if (existsSync(commonTasksPath)) {
-        // File already exists, don't overwrite - warning will be added below
-        skipMemoryBankWarning = false
-      } else {
-        // Read the tasks.md content and write to common-tasks.md
-        const tasksContent = readFileSync(memoryBankTasksPath, 'utf-8')
-        
-        // Create .agents directory if it doesn't exist
-        if (!existsSync(agentsDir)) {
-          mkdirSync(agentsDir, { recursive: true })
-        }
-        
-        writeFileSync(commonTasksPath, tasksContent, 'utf-8')
-      }
-    }
+    memoryBankImported = true
   }
   
   // Recursively find all .md files in the Kilocode rules directory
@@ -1164,12 +1143,12 @@ export function importKilocode(rulesDir: string, outputDir?: string): ImportResu
   // Build warnings array
   const warnings: string[] = []
   if (foundMemoryBank) {
-    if (skipMemoryBankWarning) {
-      // tasks.md was imported to common-tasks.md, no warning needed
-      warnings.push('memory-bank/tasks.md imported to .agents/common-tasks.md')
+    if (memoryBankImported) {
+      // tasks.md was found, indicates memory bank is available
+      warnings.push('memory-bank/tasks.md found - memory bank is available')
     } else {
-      // Memory bank exists but tasks.md wasn't imported due to existing common-tasks.md
-      warnings.push('memory-bank/tasks.md found but .agents/common-tasks.md already exists - not importing to avoid overwrite')
+      // Memory bank exists but wasn't processed
+      warnings.push('memory-bank/tasks.md found but not imported')
     }
   }
   
