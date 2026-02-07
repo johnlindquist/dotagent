@@ -1,0 +1,328 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync } from 'fs'
+import { join } from 'path'
+import { tmpdir } from 'os'
+import { importAll, exportToKilocode } from '../../src/index.js'
+import { importKilocode } from '../../src/importers.js'
+import type { RuleBlock } from '../../src/types.js'
+
+describe('Kilocode Integration Tests', () => {
+  let tempDir: string
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'dotagent-kilocode-test-'))
+  })
+
+  afterEach(() => {
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('imports .kilocode/rules/*.md files with frontmatter and private rules', async () => {
+    // Create .kilocode/rules directory structure
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const nestedDir = join(rulesDir, 'nested')
+    mkdirSync(rulesDir, { recursive: true })
+    mkdirSync(nestedDir, { recursive: true })
+
+    // Public rule with frontmatter
+    writeFileSync(join(rulesDir, 'public-rule.md'), `---
+id: public-rule
+alwaysApply: true
+description: Public coding standard
+---
+# Public Rule Content
+Always use TypeScript strict mode.`)
+
+    // Private rule by filename
+    writeFileSync(join(rulesDir, 'private.local.md'), `---
+id: private-rule
+description: Private preference
+---
+# Private Rule Content
+Prefer tabs over spaces.`)
+
+    // Nested rule with frontmatter
+    writeFileSync(join(nestedDir, '001-nested.md'), `---
+id: nested/rule
+scope: src/nested/**
+priority: high
+---
+# Nested Rule Content
+Follow nested patterns.`)
+
+    // Rule with explicit private: true
+    writeFileSync(join(rulesDir, 'explicit-private.md'), `---
+id: explicit-private
+private: true
+---
+# Explicit Private Content
+Sensitive information.`)
+
+    const { results, errors } = await importAll(tempDir)
+
+    expect(errors).toHaveLength(0)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    expect(kilocodeResult!.rules).toHaveLength(4)
+
+    // Check public rule
+    const publicRule = kilocodeResult!.rules.find(r => r.metadata.id === 'public-rule')
+    expect(publicRule).toBeDefined()
+    expect(publicRule!.metadata.alwaysApply).toBe(true)
+    expect(publicRule!.metadata.private).toBeUndefined()
+    expect(publicRule!.content).toContain('Always use TypeScript strict mode')
+
+    // Check private by filename
+    const privateByFile = kilocodeResult!.rules.find(r => r.metadata.id === 'private-rule')
+    expect(privateByFile).toBeDefined()
+    expect(privateByFile!.metadata.private).toBe(true)
+
+    // Check nested
+    const nestedRule = kilocodeResult!.rules.find(r => r.metadata.id === 'nested/rule')
+    expect(nestedRule).toBeDefined()
+    expect(nestedRule!.metadata.scope).toBe('src/nested/**')
+
+    // Check explicit private
+    const explicitPrivate = kilocodeResult!.rules.find(r => r.metadata.id === 'explicit-private')
+    expect(explicitPrivate).toBeDefined()
+    expect(explicitPrivate!.metadata.private).toBe(true)
+  })
+
+  it('exports rules to .kilocode/rules preserving frontmatter and structure', () => {
+    const rules: RuleBlock[] = [
+      {
+        metadata: {
+          id: 'exported-public',
+          alwaysApply: true,
+          description: 'Exported public rule'
+        },
+        content: '# Exported Public Content\nFollow best practices.'
+      },
+      {
+        metadata: {
+          id: 'internal/exported',
+          private: true,
+          scope: 'private/**'
+        },
+        content: '# Private Exported Content\nInternal only.'
+      },
+      {
+        metadata: {
+          id: 'nested/exported',
+          priority: 'high'
+        },
+        content: '# Nested Exported Content\nHigh priority rules.'
+      }
+    ]
+
+    exportToKilocode(rules, tempDir, { includePrivate: true })
+
+    const outputRulesDir = join(tempDir, '.kilocode', 'rules')
+    expect(readdirSync(outputRulesDir)).toContain('exported-public.md')
+
+    // Check public file
+    const publicContent = readFileSync(join(outputRulesDir, 'exported-public.md'), 'utf-8')
+    expect(publicContent).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*description: Exported public rule[\s\S]*---\n\n# Exported Public Content/)
+    expect(publicContent).toContain('Follow best practices.')
+
+    // Check nested private - note: exportToKilocode creates directories based on ID,
+    // not based on metadata.private: true. The ID was renamed from 'private/exported'
+    // to 'internal/exported' to avoid naming overlap with the private/ directory concept.
+    const privateDir = join(outputRulesDir, 'internal')
+    expect(readdirSync(privateDir)).toContain('exported.md')
+    const privateContent = readFileSync(join(privateDir, 'exported.md'), 'utf-8')
+    expect(privateContent).toMatch(/private: true/)
+    expect(privateContent).toContain('Internal only.')
+
+    // Check nested public
+    const nestedDir = join(outputRulesDir, 'nested')
+    expect(readdirSync(nestedDir)).toContain('exported.md')
+    const nestedContent = readFileSync(join(nestedDir, 'exported.md'), 'utf-8')
+    expect(nestedContent).toMatch(/priority: high/)
+    expect(nestedContent).toContain('High priority rules.')
+  })
+
+  it('roundtrip: import from .kilocode/rules and export back preserves metadata', async () => {
+    // Setup input .kilocode/rules
+    const inputRulesDir = join(tempDir, '.kilocode', 'rules')
+    mkdirSync(inputRulesDir, { recursive: true })
+    writeFileSync(join(inputRulesDir, 'roundtrip.md'), `---
+id: roundtrip-test
+alwaysApply: false
+scope: ['src/**', 'test/**']
+description: Roundtrip test rule
+priority: medium
+---
+# Roundtrip Content
+This should be preserved after import/export.`)
+
+    // Import
+    const { results } = await importAll(tempDir)
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult!.rules).toHaveLength(1)
+
+    const importedRule = kilocodeResult!.rules[0]
+    expect(importedRule.metadata.id).toBe('roundtrip-test')
+    expect(importedRule.metadata.alwaysApply).toBe(false)
+    expect(importedRule.metadata.scope).toEqual(['src/**', 'test/**'])
+    expect(importedRule.metadata.description).toBe('Roundtrip test rule')
+    expect(importedRule.metadata.priority).toBe('medium')
+
+    // Export back to new location
+    const outputDir = join(tempDir, 'output')
+    exportToKilocode([importedRule], outputDir)
+
+    const outputFile = join(outputDir, '.kilocode', 'rules', 'roundtrip-test.md')
+    const exportedContent = readFileSync(outputFile, 'utf-8')
+
+    // Verify frontmatter preserved
+    expect(exportedContent).toMatch(/^---[\s\S]*alwaysApply: false[\s\S]*scope:[\s\S]*- src\/\*\*/)
+    expect(exportedContent).toMatch(/description: Roundtrip test rule/)
+    expect(exportedContent).toMatch(/priority: medium/)
+    expect(exportedContent).toContain('# Roundtrip Content')
+    expect(exportedContent).toContain('This should be preserved after import/export.')
+  })
+
+  it('CLI export to kilocode format creates correct structure', async () => {
+    // Note: This is a smoke test; full CLI integration might require spawning process
+    // For now, test the underlying export function used by CLI
+
+    const rules: RuleBlock[] = [
+      {
+        metadata: { id: 'cli-test', alwaysApply: true },
+        content: '# CLI Test Content'
+      }
+    ]
+
+    // Simulate CLI output dir
+    const cliOutputDir = join(tempDir, 'cli-output')
+    exportToKilocode(rules, cliOutputDir)
+
+    const kilocodeDir = join(cliOutputDir, '.kilocode', 'rules')
+    expect(readdirSync(kilocodeDir)).toContain('cli-test.md')
+
+    const content = readFileSync(join(kilocodeDir, 'cli-test.md'), 'utf-8')
+    expect(content).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*---\n\n# CLI Test Content/)
+  })
+
+  it('handles private rules correctly in export (excludes by default)', () => {
+    const rules: RuleBlock[] = [
+      {
+        metadata: { id: 'public', alwaysApply: true },
+        content: '# Public'
+      },
+      {
+        metadata: { id: 'private', private: true },
+        content: '# Private'
+      }
+    ]
+
+    exportToKilocode(rules, tempDir)
+
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    expect(readdirSync(rulesDir)).toContain('public.md')
+    expect(readdirSync(rulesDir)).not.toContain('private.md')
+
+    // With includePrivate
+    const outputDir2 = join(tempDir, 'with-private')
+    exportToKilocode(rules, outputDir2, { includePrivate: true })
+
+    const rulesDir2 = join(outputDir2, '.kilocode', 'rules')
+    expect(readdirSync(rulesDir2)).toContain('public.md')
+    expect(readdirSync(rulesDir2)).toContain('private.md')
+
+    const privateContent = readFileSync(join(rulesDir2, 'private.md'), 'utf-8')
+    expect(privateContent).toMatch(/private: true/)
+  })
+
+  it('memory-bank directory is skipped from regular rule imports', async () => {
+    // Create .kilocode/rules directory with memory-bank subdirectory
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    // Create a regular rule
+    writeFileSync(join(rulesDir, 'regular-rule.md'), `---
+id: regular-rule
+description: Regular rule
+---
+# Regular Rule Content
+This is a regular rule.`)
+
+    // Create a file in memory-bank (should be skipped from regular imports)
+    writeFileSync(join(memoryBankDir, 'tasks.md'), `# Tasks
+- Task 1
+- Task 2`)
+
+    writeFileSync(join(memoryBankDir, 'context.md'), `# Context
+Project context.`)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // Only the regular rule should be imported
+    expect(kilocodeResult!.rules).toHaveLength(1)
+    expect(kilocodeResult!.rules[0].metadata.id).toBe('regular-rule')
+    
+    // Warning about memory-bank should be present (memory-bank migration is now separate)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
+    
+    // Verify memory-bank files are not in rules
+    const ruleIds = kilocodeResult!.rules.map(r => r.metadata.id)
+    expect(ruleIds).not.toContain('memory-bank/tasks')
+    expect(ruleIds).not.toContain('memory-bank/context')
+  })
+
+  it('memory-bank/tasks.md is detected during import (migration is now handled separately)', async () => {
+    // Create .kilocode/rules directory with memory-bank/tasks.md
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    const tasksContent = `# Common Tasks
+- Write tests
+- Review code
+- Deploy`
+    writeFileSync(join(memoryBankDir, 'tasks.md'), tasksContent)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // Warning should indicate memory bank was found (migration is now handled separately)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
+    
+    // Note: The actual file migration (.agents/common-tasks.md) is now handled by the CLI/ orchestration layer
+    // This test verifies the import function correctly detects and reports memory-bank
+  })
+
+  it('memory-bank/tasks.md is detected when .agents/common-tasks.md already exists', async () => {
+    // Create .kilocode/rules directory with memory-bank/tasks.md
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    const memoryBankTasksContent = '# Memory Bank Tasks\n- Task from memory bank'
+    writeFileSync(join(memoryBankDir, 'tasks.md'), memoryBankTasksContent)
+
+    // Create existing .agents/common-tasks.md (simulating pre-existing file)
+    const agentsDir = join(tempDir, '.agents')
+    mkdirSync(agentsDir, { recursive: true })
+    const existingContent = '# Existing Tasks\n- Existing task'
+    writeFileSync(join(agentsDir, 'common-tasks.md'), existingContent)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // Warning should indicate memory bank was found (migration is now handled separately)
+    expect(warnings).toContain('memory-bank/tasks.md found - memory bank is available')
+    
+    // Note: The actual file migration decision is now handled by the CLI/orchestration layer
+  })
+})

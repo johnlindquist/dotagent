@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
-import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode } from './index.js'
+import { importAgent, importAll, importKilocode, importOpenCode, importRoo, exportAll, exportToAgent, exportToAider, exportToClaudeCode, exportToCline, exportToCodex, exportToCopilot, exportToCursor, exportToGemini, exportToJunie, exportToKilocode, exportToOpenCode, exportToQodo, exportToRoo, exportToWindsurf, exportToZed } from './index.js'
 import { color, header, formatList } from './utils/colors.js'
 import { select, confirm } from './utils/prompt.js'
 
@@ -30,6 +30,9 @@ if (values['gitignore'] && values['no-gitignore']) {
   process.exit(1)
 }
 
+/**
+ * Display help message with usage instructions and available options
+ */
 function showHelp() {
   console.log(`
 ${color.bold('dotagent')} - Multi-file AI agent configuration manager
@@ -42,7 +45,7 @@ ${color.bold('Usage:')}
 ${color.bold('Options:')}
   ${color.yellow('-h, --help')}       Show this help message
   ${color.yellow('-o, --output')}     Output file path (for convert command)
-  ${color.yellow('-f, --format')}     Specify format (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|junie|opencode)
+  ${color.yellow('-f, --format')}     Specify format (agent|aider|amazonq|claude|cline|codex|copilot|cursor|gemini|junie|kilocode|opencode|qodo|roo|windsurf|zed)
   ${color.yellow('--formats')}        Specify multiple formats (comma-separated)
   ${color.yellow('-w, --overwrite')}  Overwrite existing files
   ${color.yellow('-d, --dry-run')}    Preview operations without making changes
@@ -64,6 +67,9 @@ ${color.bold('Examples:')}
 `)
 }
 
+/**
+ * CLI entry point that handles import, export, and convert commands
+ */
 async function main() {
   if (values.help || positionals.length === 0) {
     showHelp()
@@ -90,10 +96,15 @@ async function main() {
         process.exit(1)
       }
 
+      // Debug logging
+      console.log(color.dim(`[DEBUG] Resolved repoPath: ${repoPath}`))
+      console.log(color.dim(`[DEBUG] Current working directory: ${process.cwd()}`))
+      console.log(color.dim(`[DEBUG] .agent directory exists: ${existsSync(join(repoPath, '.agent'))}`))
+
       console.log(header('Importing Rules'))
       console.log(`Scanning: ${color.path(repoPath)}`)
       
-      const { results, errors } = await importAll(repoPath)
+      const { results, errors, warnings } = await importAll(repoPath)
 
       if (results.length === 0) {
         console.log(color.warning('No rule files found'))
@@ -131,10 +142,22 @@ async function main() {
         if (isDryRun) {
           console.log(color.info(`Would export to: ${color.path(agentDir)}`))
           console.log(color.dim(`Total rules: ${allRules.length}`))
+          console.log(color.dim(`[DEBUG] Dry-run mode: .agent directory would NOT be created`))
         } else {
           const outputDir = values.output || repoPath
           exportToAgent(allRules, outputDir)
           console.log(color.success(`Created .agent/ directory with ${color.number(allRules.length.toString())} rule(s)`))
+          console.log(color.dim(`[DEBUG] .agent directory created at: ${agentDir}`))
+          console.log(color.dim(`[DEBUG] outputDir: ${outputDir}`))
+          console.log(color.dim(`[DEBUG] .agent exists after export: ${existsSync(join(outputDir, '.agent'))}`))
+        }
+      }
+
+      // Show warnings
+      if (warnings.length > 0) {
+        console.log(color.warning('Warnings:'))
+        for (const warning of warnings) {
+          console.log(`  ${color.yellow('!')} ${warning}`)
         }
       }
 
@@ -195,7 +218,8 @@ async function main() {
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
         { name: 'Roo Code (.roo/rules/)', value: 'roo' },
         { name: 'JetBrains Junie (.junie/guidelines.md)', value: 'junie' },
-        { name: 'OpenCode (AGENTS.md)', value: 'opencode' }
+        { name: 'OpenCode (AGENTS.md)', value: 'opencode' },
+        { name: 'KiloCode (.kilocode/rules/)', value: 'kilocode' }
       ]
 
       // Handle format parameter or show interactive menu
@@ -215,7 +239,7 @@ async function main() {
       }
 
       // Validate formats
-      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode']
+      const validFormats = ['all', 'copilot', 'cursor', 'cline', 'windsurf', 'zed', 'codex', 'aider', 'claude', 'gemini', 'qodo', 'roo', 'junie', 'opencode', 'kilocode']
       const invalidFormats = selectedFormats.filter(f => !validFormats.includes(f))
       if (invalidFormats.length > 0) {
         console.error(color.error(`Invalid format(s): ${invalidFormats.join(', ')}`))
@@ -238,16 +262,20 @@ async function main() {
           }
           console.log(color.success('Exported to all formats'))
           exportedPaths.push(
-            '.github/copilot-instructions.md',
-            '.cursor/rules/',
+            '.amazonq/rules/',
             '.clinerules',
-            '.windsurfrules',
+            '.cursor/rules/',
+            '.github/copilot-instructions.md',
+            '.junie/guidelines.md',
+            '.kilocode/rules/',
+            '.roo/rules/',
             '.rules',
+            '.windsurfrules',
             'AGENTS.md',
-            'CONVENTIONS.md',
+            'best_practices.md',
             'CLAUDE.md',
-            'GEMINI.md',
-            'best_practices.md'
+            'CONVENTIONS.md',
+            'GEMINI.md'
           )
         } else {
           // Export to specific format
@@ -319,6 +347,11 @@ async function main() {
               exportPath = join(outputDir, '.junie/guidelines.md')
               exportedPaths.push('.junie/guidelines.md')
               break
+            case 'kilocode':
+              if (!isDryRun) exportToKilocode(rules, outputDir, options)
+              exportPath = join(outputDir, '.kilocode/rules/')
+              exportedPaths.push('.kilocode/rules/')
+              break
           }
           
           if (exportPath) {
@@ -387,9 +420,10 @@ async function main() {
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
         else if (inputPath.includes('.roo/rules')) format = 'roo'
+        else if (inputPath.includes('.kilocode/rules')) format = 'kilocode'
         else {
           console.error(color.error('Cannot auto-detect format'))
-          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode)'))
+          console.error(color.dim('Hint: Specify format with -f (copilot|cursor|cline|windsurf|zed|codex|aider|claude|gemini|qodo|roo|opencode|kilocode)'))
           process.exit(1)
         }
       }
@@ -398,7 +432,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo, importKilocode } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -438,6 +472,9 @@ async function main() {
         case 'roo':
           result = importRoo(inputPath)
           break
+        case 'kilocode':
+          result = importKilocode(inputPath)
+          break
         default:
           console.error(color.error(`Unknown format: ${format}`))
           process.exit(1)
@@ -472,6 +509,9 @@ async function main() {
   }
 }
 
+/**
+ * Filter gitignore patterns that are not already present in the content
+ */
 function filterNewPatterns(content: string, paths: string[]): string[] {
   const lines = content
     .split(/\r?\n/)
@@ -493,6 +533,9 @@ function filterNewPatterns(content: string, paths: string[]): string[] {
   return paths.filter(p => !variants(p).some(v => lineSet.has(v)))
 }
 
+/**
+ * Check if any of the exported paths would add new patterns to gitignore
+ */
 function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
@@ -507,6 +550,9 @@ function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolea
   return newPatterns.length > 0
 }
 
+/**
+ * Update gitignore with exported AI rule file patterns
+ */
 function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
@@ -534,22 +580,28 @@ function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
   }
 }
 
+/**
+ * Add private rule file patterns to gitignore
+ */
 function updateGitignore(repoPath: string): void {
   const gitignorePath = join(repoPath, '.gitignore')
   const privatePatterns = [
     '# Added by dotagent: ignore private AI rule files',
     '.agent/**/*.local.md',
     '.agent/private/**',
-    '.github/copilot-instructions.local.md',
-    '.cursor/rules/**/*.local.{mdc,md}',
-    '.cursor/rules-private/**',
     '.clinerules.local',
     '.clinerules/private/**',
-    '.windsurfrules.local',
+    '.cursor/rules/**/*.local.{mdc,md}',
+    '.cursor/rules-private/**',
+    '.github/copilot-instructions.local.md',
+    '.junie/guidelines.local.md',
+    '.kilocode/rules/*.local.md',
+    '.roo/rules/*.local.md',
     '.rules.local',
+    '.windsurfrules.local',
     'AGENTS.local.md',
-    'CONVENTIONS.local.md',
     'CLAUDE.local.md',
+    'CONVENTIONS.local.md',
     'GEMINI.local.md'
   ].join('\n')
   

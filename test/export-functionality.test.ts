@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToQodo, exportToOpenCode, exportAll } from '../src/exporters.js'
+import { exportToAider, exportToAmazonQ, exportToClaudeCode, exportToCline, exportToCodex, exportToCopilot, exportToCursor, exportToGemini, exportToJunie, exportToKilocode, exportToOpenCode, exportToQodo, exportToRoo, exportToWindsurf, exportToZed, exportAll } from '../src/exporters.js'
 import type { RuleBlock } from '../src/types.js'
 
 describe('Export functionality with format selection', () => {
@@ -81,6 +81,7 @@ describe('Export functionality with format selection', () => {
     expect(existsSync(join(tempDir, 'CONVENTIONS.md'))).toBe(true)
     expect(existsSync(join(tempDir, 'CLAUDE.md'))).toBe(true)
     expect(existsSync(join(tempDir, 'best_practices.md'))).toBe(true)
+    expect(existsSync(join(tempDir, '.kilocode', 'rules', 'test-rule.md'))).toBe(true)
   })
 
   it('should generate correct gitignore patterns for exported paths', () => {
@@ -93,7 +94,8 @@ describe('Export functionality with format selection', () => {
       'AGENTS.md',
       'CONVENTIONS.md',
       'CLAUDE.md',
-      'best_practices.md'
+      'best_practices.md',
+      '.kilocode/rules/'
     ]
 
     const patterns = paths.map(p => p.endsWith('/') ? p + '**' : p)
@@ -107,7 +109,8 @@ describe('Export functionality with format selection', () => {
       'AGENTS.md',
       'CONVENTIONS.md',
       'CLAUDE.md',
-      'best_practices.md'
+      'best_practices.md',
+      '.kilocode/rules/**'
     ])
   })
 
@@ -131,7 +134,8 @@ describe('Export functionality with format selection', () => {
       'AGENTS.md',
       'CONVENTIONS.md', 
       'CLAUDE.md',
-      'best_practices.md'
+      'best_practices.md',
+      '.kilocode/rules/'
     ]
     
     exportedFiles.forEach(file => {
@@ -153,7 +157,12 @@ describe('Export format selection mapping', () => {
       'opencode': { exporter: exportToOpenCode, path: 'AGENTS.md' },
       'aider': { exporter: exportToAider, path: 'CONVENTIONS.md' },
       'claude': { exporter: exportToClaudeCode, path: 'CLAUDE.md' },
-      'qodo': { exporter: exportToQodo, path: 'best_practices.md' }
+      'gemini': { exporter: exportToGemini, path: 'GEMINI.md' },
+      'qodo': { exporter: exportToQodo, path: 'best_practices.md' },
+      'kilocode': { exporter: exportToKilocode, path: '.kilocode/rules/' },
+      'roo': { exporter: exportToRoo, path: '.roo/rules/' },
+      'junie': { exporter: exportToJunie, path: '.junie/guidelines.md' },
+      'amazonq': { exporter: exportToAmazonQ, path: '.amazonq/rules/' }
     }
     
     Object.entries(formatMap).forEach(([format, config]) => {
@@ -163,8 +172,8 @@ describe('Export format selection mapping', () => {
   })
 })
 
-// Helper to get dirname
+// Helper to get dirname - cross-platform compatible
 function dirname(path: string): string {
-  const parts = path.split('/')
+  const parts = path.split(/[/\\]/)
   return parts.slice(0, -1).join('/')
 }

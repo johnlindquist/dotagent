@@ -20,7 +20,8 @@ export {
   importQodo,
   importAmazonQ,
   importRoo,
-  importJunie
+  importJunie,
+  importKilocode
 } from './importers.js'
 
 export {
@@ -40,6 +41,7 @@ export {
   exportToAmazonQ,
   exportToRoo,
   exportToJunie,
+  exportToKilocode,
   exportAll
 } from './exporters.js'
 

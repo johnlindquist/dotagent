@@ -1,10 +1,12 @@
 import { readFileSync, existsSync, readdirSync, statSync, Dirent } from 'fs'
-import { join, basename } from 'path'
+import { join, basename, dirname } from 'path'
 import matter from 'gray-matter'
 import type { ImportResult, ImportResults, RuleBlock } from './types.js'
 import { grayMatterOptions } from './yaml-parser.js'
 
-// Helper function to detect if a file/path indicates a private rule
+/**
+ * Detect if a file path indicates a private rule
+ */
 function isPrivateRule(filePath: string): boolean {
   const lowerPath = filePath.toLowerCase()
   return lowerPath.includes('.local.') || lowerPath.includes('/private/') || lowerPath.includes('\\private\\')
@@ -13,12 +15,17 @@ function isPrivateRule(filePath: string): boolean {
 export async function importAll(repoPath: string): Promise<ImportResults> {
   const results: ImportResult[] = []
   const errors: Array<{ file: string; error: string }> = []
+  const warnings: string[] = []
   
   // Check for Agent directory (.agent/)
   const agentDir = join(repoPath, '.agent')
   if (existsSync(agentDir)) {
     try {
-      results.push(importAgent(agentDir))
+      const result = importAgent(agentDir)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: agentDir, error: String(e) })
     }
@@ -28,7 +35,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const copilotPath = join(repoPath, '.github', 'copilot-instructions.md')
   if (existsSync(copilotPath)) {
     try {
-      results.push(importCopilot(copilotPath))
+      const result = importCopilot(copilotPath)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: copilotPath, error: String(e) })
     }
@@ -38,7 +49,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const copilotLocalPath = join(repoPath, '.github', 'copilot-instructions.local.md')
   if (existsSync(copilotLocalPath)) {
     try {
-      results.push(importCopilot(copilotLocalPath))
+      const result = importCopilot(copilotLocalPath)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: copilotLocalPath, error: String(e) })
     }
@@ -48,7 +63,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const cursorDir = join(repoPath, '.cursor')
   if (existsSync(cursorDir)) {
     try {
-      results.push(importCursor(cursorDir))
+      const result = importCursor(cursorDir)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: cursorDir, error: String(e) })
     }
@@ -58,7 +77,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const cursorRulesFile = join(repoPath, '.cursorrules')
   if (existsSync(cursorRulesFile)) {
     try {
-      results.push(importCursorLegacy(cursorRulesFile))
+      const result = importCursorLegacy(cursorRulesFile)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: cursorRulesFile, error: String(e) })
     }
@@ -68,7 +91,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const clinerules = join(repoPath, '.clinerules')
   if (existsSync(clinerules)) {
     try {
-      results.push(importCline(clinerules))
+      const result = importCline(clinerules)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: clinerules, error: String(e) })
     }
@@ -78,7 +105,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const clinerulesLocal = join(repoPath, '.clinerules.local')
   if (existsSync(clinerulesLocal)) {
     try {
-      results.push(importCline(clinerulesLocal))
+      const result = importCline(clinerulesLocal)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: clinerulesLocal, error: String(e) })
     }
@@ -88,7 +119,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const windsurfRules = join(repoPath, '.windsurfrules')
   if (existsSync(windsurfRules)) {
     try {
-      results.push(importWindsurf(windsurfRules))
+      const result = importWindsurf(windsurfRules)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: windsurfRules, error: String(e) })
     }
@@ -98,7 +133,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const windsurfRulesLocal = join(repoPath, '.windsurfrules.local')
   if (existsSync(windsurfRulesLocal)) {
     try {
-      results.push(importWindsurf(windsurfRulesLocal))
+      const result = importWindsurf(windsurfRulesLocal)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: windsurfRulesLocal, error: String(e) })
     }
@@ -108,7 +147,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const zedRules = join(repoPath, '.rules')
   if (existsSync(zedRules)) {
     try {
-      results.push(importZed(zedRules))
+      const result = importZed(zedRules)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: zedRules, error: String(e) })
     }
@@ -118,7 +161,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const zedRulesLocal = join(repoPath, '.rules.local')
   if (existsSync(zedRulesLocal)) {
     try {
-      results.push(importZed(zedRulesLocal))
+      const result = importZed(zedRulesLocal)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: zedRulesLocal, error: String(e) })
     }
@@ -128,7 +175,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const agentsMd = join(repoPath, 'AGENTS.md')
   if (existsSync(agentsMd)) {
     try {
-      results.push(importCodex(agentsMd))
+      const result = importCodex(agentsMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: agentsMd, error: String(e) })
     }
@@ -138,7 +189,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const agentsLocalMd = join(repoPath, 'AGENTS.local.md')
   if (existsSync(agentsLocalMd)) {
     try {
-      results.push(importCodex(agentsLocalMd))
+      const result = importCodex(agentsLocalMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: agentsLocalMd, error: String(e) })
     }
@@ -148,7 +203,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const claudeMd = join(repoPath, 'CLAUDE.md')
   if (existsSync(claudeMd)) {
     try {
-      results.push(importClaudeCode(claudeMd))
+      const result = importClaudeCode(claudeMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: claudeMd, error: String(e) })
     }
@@ -158,7 +217,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const opencodeMd = join(repoPath, 'AGENTS.md')
   if (existsSync(opencodeMd)) {
     try {
-      results.push(importOpenCode(opencodeMd))
+      const result = importOpenCode(opencodeMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: opencodeMd, error: String(e) })
     }
@@ -173,7 +236,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const geminiMd = join(repoPath, 'GEMINI.md')
   if (existsSync(geminiMd)) {
     try {
-      results.push(importGemini(geminiMd))
+      const result = importGemini(geminiMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: geminiMd, error: String(e) })
     }
@@ -183,7 +250,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const bestPracticesMd = join(repoPath, 'best_practices.md')
   if (existsSync(bestPracticesMd)) {
     try {
-      results.push(importQodo(bestPracticesMd))
+      const result = importQodo(bestPracticesMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: bestPracticesMd, error: String(e) })
     }
@@ -193,7 +264,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const claudeLocalMd = join(repoPath, 'CLAUDE.local.md')
   if (existsSync(claudeLocalMd)) {
     try {
-      results.push(importClaudeCode(claudeLocalMd))
+      const result = importClaudeCode(claudeLocalMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: claudeLocalMd, error: String(e) })
     }
@@ -203,7 +278,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const geminiLocalMd = join(repoPath, 'GEMINI.local.md')
   if (existsSync(geminiLocalMd)) {
     try {
-      results.push(importGemini(geminiLocalMd))
+      const result = importGemini(geminiLocalMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: geminiLocalMd, error: String(e) })
     }
@@ -213,7 +292,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const conventionsMd = join(repoPath, 'CONVENTIONS.md')
   if (existsSync(conventionsMd)) {
     try {
-      results.push(importAider(conventionsMd))
+      const result = importAider(conventionsMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: conventionsMd, error: String(e) })
     }
@@ -223,7 +306,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const conventionsLocalMd = join(repoPath, 'CONVENTIONS.local.md')
   if (existsSync(conventionsLocalMd)) {
     try {
-      results.push(importAider(conventionsLocalMd))
+      const result = importAider(conventionsLocalMd)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: conventionsLocalMd, error: String(e) })
     }
@@ -233,7 +320,11 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const amazonqRulesDir = join(repoPath, '.amazonq', 'rules')
   if (existsSync(amazonqRulesDir)) {
     try {
-      results.push(importAmazonQ(amazonqRulesDir))
+      const result = importAmazonQ(amazonqRulesDir)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: amazonqRulesDir, error: String(e) })
     }
@@ -243,9 +334,27 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const rooRulesDir = join(repoPath, '.roo', 'rules')
   if (existsSync(rooRulesDir)) {
     try {
-      results.push(importRoo(rooRulesDir))
+      const result = importRoo(rooRulesDir)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: rooRulesDir, error: String(e) })
+    }
+  }
+
+  // Check for Kilocode rules
+  const kilocodeRulesDir = join(repoPath, '.kilocode', 'rules')
+  if (existsSync(kilocodeRulesDir)) {
+    try {
+      const result = importKilocode(kilocodeRulesDir)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
+    } catch (e) {
+      errors.push({ file: kilocodeRulesDir, error: String(e) })
     }
   }
 
@@ -253,15 +362,22 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
   const junieGuidelines = join(repoPath, '.junie', 'guidelines.md')
   if (existsSync(junieGuidelines)) {
     try {
-      results.push(importJunie(junieGuidelines))
+      const result = importJunie(junieGuidelines)
+      results.push(result)
+      if (result.warnings) {
+        warnings.push(...result.warnings)
+      }
     } catch (e) {
       errors.push({ file: junieGuidelines, error: String(e) })
     }
   }
   
-  return { results, errors }
+  return { results, errors, warnings }
 }
 
+/**
+ * Import GitHub Copilot custom instructions from a file
+ */
 export function importCopilot(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivate = isPrivateRule(filePath)
@@ -289,6 +405,9 @@ export function importCopilot(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import rules from .agent directory
+ */
 export function importAgent(agentDir: string): ImportResult {
   const rules: RuleBlock[] = []
   
@@ -358,6 +477,9 @@ export function importAgent(agentDir: string): ImportResult {
   }
 }
 
+/**
+ * Import Cursor rules from .cursor directory
+ */
 export function importCursor(cursorDir: string): ImportResult {
   const rules: RuleBlock[] = []
   
@@ -432,6 +554,9 @@ export function importCursor(cursorDir: string): ImportResult {
   }
 }
 
+/**
+ * Import legacy .cursorrules file
+ */
 export function importCursorLegacy(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const rules: RuleBlock[] = [{
@@ -451,6 +576,9 @@ export function importCursorLegacy(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Cline rules from .clinerules file or directory
+ */
 export function importCline(rulesPath: string): ImportResult {
   const rules: RuleBlock[] = []
   
@@ -532,6 +660,9 @@ export function importCline(rulesPath: string): ImportResult {
   }
 }
 
+/**
+ * Import Windsurf rules from .windsurfrules file
+ */
 export function importWindsurf(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -559,6 +690,9 @@ export function importWindsurf(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Zed rules from .rules file
+ */
 export function importZed(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -586,6 +720,9 @@ export function importZed(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import OpenAI Codex rules from AGENTS.md
+ */
 export function importCodex(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const format = basename(filePath) === 'AGENTS.md' || basename(filePath) === 'AGENTS.local.md' ? 'codex' : 'unknown'
@@ -614,6 +751,9 @@ export function importCodex(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Aider conventions from CONVENTIONS.md
+ */
 export function importAider(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -641,6 +781,9 @@ export function importAider(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Claude Code instructions from CLAUDE.md
+ */
 export function importClaudeCode(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -668,6 +811,9 @@ export function importClaudeCode(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import OpenCode agents from AGENTS.md
+ */
 export function importOpenCode(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -695,6 +841,9 @@ export function importOpenCode(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Gemini CLI instructions from GEMINI.md
+ */
 export function importGemini(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -722,6 +871,9 @@ export function importGemini(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Qodo best practices from best_practices.md
+ */
 export function importQodo(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const rules: RuleBlock[] = [{
@@ -743,6 +895,9 @@ export function importQodo(filePath: string): ImportResult {
   }
 }
 
+/**
+ * Import Amazon Q rules from .amazonq/rules directory
+ */
 export function importAmazonQ(rulesDir: string): ImportResult {
   const rules: RuleBlock[] = []
   
@@ -804,6 +959,9 @@ export function importAmazonQ(rulesDir: string): ImportResult {
   }
 }
 
+/**
+ * Import Roo Code rules from .roo/rules directory
+ */
 export function importRoo(rulesDir: string): ImportResult {
   const rules: RuleBlock[] = []
   
@@ -873,6 +1031,9 @@ export function importRoo(rulesDir: string): ImportResult {
     }
 }
 
+/**
+ * Import JetBrains Junie guidelines from .junie/guidelines.md
+ */
 export function importJunie(filePath: string): ImportResult {
   const content = readFileSync(filePath, 'utf-8')
   const isPrivateFile = isPrivateRule(filePath)
@@ -893,9 +1054,108 @@ export function importJunie(filePath: string): ImportResult {
   }]
   
   return {
-    format: 'junie' as any,
+    format: 'junie',
     filePath,
     rules,
     raw: content
+  }
+}
+
+/**
+ * Import KiloCode rules from .kilocode/rules directory
+ */
+export function importKilocode(rulesDir: string): ImportResult {
+  const rules: RuleBlock[] = []
+  let foundMemoryBank = false
+  let memoryBankImported = false
+  
+  // Check for memory-bank/tasks.md
+  const memoryBankTasksPath = join(rulesDir, 'memory-bank', 'tasks.md')
+  if (existsSync(memoryBankTasksPath)) {
+    foundMemoryBank = true
+    memoryBankImported = true
+  }
+  
+  // Recursively find all .md files in the Kilocode rules directory
+  function findMdFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
+      
+    // Ensure deterministic ordering: process directories before files, then sort alphabetically
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1;
+      if (!a.isDirectory() && b.isDirectory()) return 1;
+      return a.name.localeCompare(b.name);
+    })
+      
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+      
+      if (entry.isDirectory()) {
+        // Skip memory-bank directory - it's separate from agent rules
+        if (entry.name === 'memory-bank') {
+          foundMemoryBank = true
+          continue
+        }
+        // Recursively search subdirectories
+        findMdFiles(fullPath, relPath)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const content = readFileSync(fullPath, 'utf-8')
+        const { data, content: body } = matter(content, grayMatterOptions)
+        
+        // Remove any leading numeric ordering prefixes (e.g., "001-" or "12-") from each path segment
+        let segments = relPath
+          .replace(/\.md$/, '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
+        if (segments[0] === 'private') segments = segments.slice(1)
+        const defaultId = segments.join('/')
+        
+        // Check if this is a private rule (either by path or frontmatter)
+        const isPrivateFile = isPrivateRule(fullPath)
+        
+        const metadata: any = {
+          id: data.id || defaultId,
+          ...data
+        }
+        
+        // Set default alwaysApply to false if not specified
+        if (metadata.alwaysApply === undefined) {
+          metadata.alwaysApply = false
+        }
+        
+        // Only set private if it's true (from file pattern or frontmatter)
+        if (data.private === true || (data.private === undefined && isPrivateFile)) {
+          metadata.private = true
+        }
+        
+        rules.push({
+          metadata,
+          content: body.trim()
+        })
+      }
+    }
+  }
+    
+  findMdFiles(rulesDir)
+  
+  // Build warnings array
+  const warnings: string[] = []
+  if (foundMemoryBank) {
+    if (memoryBankImported) {
+      // tasks.md was found, indicates memory bank is available
+      warnings.push('memory-bank/tasks.md found - memory bank is available')
+    } else {
+      // Memory bank exists but wasn't processed
+      warnings.push('memory-bank/tasks.md found but not imported')
+    }
+  }
+  
+  return {
+    format: 'kilocode',
+    filePath: rulesDir,
+    rules,
+    warnings: warnings.length > 0 ? warnings : undefined
   }
 }
