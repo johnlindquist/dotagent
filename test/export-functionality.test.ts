@@ -168,8 +168,8 @@ describe('Export format selection mapping', () => {
   })
 })
 
-// Helper to get dirname
+// Helper to get dirname - cross-platform compatible
 function dirname(path: string): string {
-  const parts = path.split('/')
+  const parts = path.split(/[/\\]/)
   return parts.slice(0, -1).join('/')
 }

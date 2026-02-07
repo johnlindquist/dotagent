@@ -132,6 +132,9 @@ export function toAgentMarkdown(rules: RuleBlock[]): string {
   return sections.join('\n\n')
 }
 
+/**
+ * Export rules to GitHub Copilot format
+ */
 export function exportToCopilot(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -154,6 +157,9 @@ export function exportToCopilot(rules: RuleBlock[], outputPath: string, options?
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to .agent directory
+ */
 export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const agentDir = join(outputDir, '.agent')
   mkdirSync(agentDir, { recursive: true })
@@ -213,6 +219,9 @@ export function exportToAgent(rules: RuleBlock[], outputDir: string, options?: E
   })
 }
 
+/**
+ * Export rules to Cursor format (.cursor/rules/)
+ */
 export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const rulesDir = join(outputDir, '.cursor', 'rules')
   mkdirSync(rulesDir, { recursive: true })
@@ -264,6 +273,9 @@ export function exportToCursor(rules: RuleBlock[], outputDir: string, options?: 
   }
 }
 
+/**
+ * Export rules to Cline format (.clinerules)
+ */
 export function exportToCline(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -299,6 +311,9 @@ export function exportToCline(rules: RuleBlock[], outputPath: string, options?: 
   }
 }
 
+/**
+ * Export rules to Windsurf format (.windsurfrules)
+ */
 export function exportToWindsurf(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -318,6 +333,9 @@ export function exportToWindsurf(rules: RuleBlock[], outputPath: string, options
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to Zed format (.rules)
+ */
 export function exportToZed(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -337,6 +355,9 @@ export function exportToZed(rules: RuleBlock[], outputPath: string, options?: Ex
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Helper function to export rules to a single file with description headers
+ */
 function exportSingleFileWithHeaders(
   rules: RuleBlock[],
   outputPath: string,
@@ -362,10 +383,16 @@ function exportSingleFileWithHeaders(
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to OpenAI Codex format (AGENTS.md)
+ */
 export function exportToCodex(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
+/**
+ * Export rules to Aider format (CONVENTIONS.md)
+ */
 export function exportToAider(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -385,14 +412,23 @@ export function exportToAider(rules: RuleBlock[], outputPath: string, options?: 
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to Claude Code format (CLAUDE.md)
+ */
 export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
+/**
+ * Export rules to OpenCode format (AGENTS.md)
+ */
 export function exportToOpenCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   exportSingleFileWithHeaders(rules, outputPath, options)
 }
 
+/**
+ * Export rules to Gemini CLI format (GEMINI.md)
+ */
 export function exportToGemini(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -408,6 +444,9 @@ export function exportToGemini(rules: RuleBlock[], outputPath: string, options?:
   writeFileSync(outputPath, content, 'utf-8')
 }
 
+/**
+ * Export rules to Qodo format (best_practices.md)
+ */
 export function exportToQodo(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
   // Filter out private rules unless includePrivate is true
   const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
@@ -430,6 +469,9 @@ export function exportToQodo(rules: RuleBlock[], outputPath: string, options?: E
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to Amazon Q format (.amazonq/rules/)
+ */
 export function exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const rulesDir = join(outputDir, '.amazonq', 'rules')
   mkdirSync(rulesDir, { recursive: true })
@@ -462,6 +504,9 @@ export function exportToAmazonQ(rules: RuleBlock[], outputDir: string, options?:
   }
 }
 
+/**
+ * Export rules to Roo Code format (.roo/rules/)
+ */
 export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const rulesDir = join(outputDir, '.roo', 'rules')
   mkdirSync(rulesDir, { recursive: true })
@@ -517,6 +562,9 @@ export function exportToRoo(rules: RuleBlock[], outputDir: string, options?: Exp
   }
 }
 
+/**
+ * Export rules to KiloCode format (.kilocode/rules/)
+ */
 export function exportToKilocode(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const rulesDir = join(outputDir, '.kilocode', 'rules')
   mkdirSync(rulesDir, { recursive: true })
@@ -572,6 +620,9 @@ export function exportToKilocode(rules: RuleBlock[], outputDir: string, options?
   }
 }
 
+/**
+ * Export rules to JetBrains Junie format (.junie/guidelines.md)
+ */
 export function exportToJunie(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
   const junieDir = join(outputDir, '.junie')
   mkdirSync(junieDir, { recursive: true })
@@ -598,6 +649,9 @@ export function exportToJunie(rules: RuleBlock[], outputDir: string, options?: E
   writeFileSync(filePath, fullContent, 'utf-8')
 }
 
+/**
+ * Export rules to all supported formats
+ */
 export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, options: ExportOptions = { includePrivate: false }): void {
   // Export to all supported formats
   if (!dryRun) {

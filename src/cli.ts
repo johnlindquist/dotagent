@@ -30,6 +30,9 @@ if (values['gitignore'] && values['no-gitignore']) {
   process.exit(1)
 }
 
+/**
+ * Display help message with usage instructions and available options
+ */
 function showHelp() {
   console.log(`
 ${color.bold('dotagent')} - Multi-file AI agent configuration manager
@@ -64,6 +67,9 @@ ${color.bold('Examples:')}
 `)
 }
 
+/**
+ * CLI entry point that handles import, export, and convert commands
+ */
 async function main() {
   if (values.help || positionals.length === 0) {
     showHelp()
@@ -93,7 +99,7 @@ async function main() {
       console.log(header('Importing Rules'))
       console.log(`Scanning: ${color.path(repoPath)}`)
       
-      const { results, errors } = await importAll(repoPath)
+      const { results, errors, warnings } = await importAll(repoPath)
 
       if (results.length === 0) {
         console.log(color.warning('No rule files found'))
@@ -135,6 +141,14 @@ async function main() {
           const outputDir = values.output || repoPath
           exportToAgent(allRules, outputDir)
           console.log(color.success(`Created .agent/ directory with ${color.number(allRules.length.toString())} rule(s)`))
+        }
+      }
+
+      // Show warnings
+      if (warnings.length > 0) {
+        console.log(color.warning('Warnings:'))
+        for (const warning of warnings) {
+          console.log(`  ${color.yellow('!')} ${warning}`)
         }
       }
 
@@ -239,16 +253,20 @@ async function main() {
           }
           console.log(color.success('Exported to all formats'))
           exportedPaths.push(
-            '.github/copilot-instructions.md',
-            '.cursor/rules/',
+            '.amazonq/rules/',
             '.clinerules',
-            '.windsurfrules',
+            '.cursor/rules/',
+            '.github/copilot-instructions.md',
+            '.junie/guidelines.md',
+            '.kilocode/rules/',
+            '.roo/rules/',
             '.rules',
+            '.windsurfrules',
             'AGENTS.md',
-            'CONVENTIONS.md',
+            'best_practices.md',
             'CLAUDE.md',
-            'GEMINI.md',
-            'best_practices.md'
+            'CONVENTIONS.md',
+            'GEMINI.md'
           )
         } else {
           // Export to specific format
@@ -482,6 +500,9 @@ async function main() {
   }
 }
 
+/**
+ * Filter gitignore patterns that are not already present in the content
+ */
 function filterNewPatterns(content: string, paths: string[]): string[] {
   const lines = content
     .split(/\r?\n/)
@@ -503,6 +524,9 @@ function filterNewPatterns(content: string, paths: string[]): string[] {
   return paths.filter(p => !variants(p).some(v => lineSet.has(v)))
 }
 
+/**
+ * Check if any of the exported paths would add new patterns to gitignore
+ */
 function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
@@ -517,6 +541,9 @@ function checkForNewGitignorePatterns(repoPath: string, paths: string[]): boolea
   return newPatterns.length > 0
 }
 
+/**
+ * Update gitignore with exported AI rule file patterns
+ */
 function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
   const gitignorePath = join(repoPath, '.gitignore')
   
@@ -544,22 +571,28 @@ function updateGitignoreWithPaths(repoPath: string, paths: string[]): boolean {
   }
 }
 
+/**
+ * Add private rule file patterns to gitignore
+ */
 function updateGitignore(repoPath: string): void {
   const gitignorePath = join(repoPath, '.gitignore')
   const privatePatterns = [
     '# Added by dotagent: ignore private AI rule files',
     '.agent/**/*.local.md',
     '.agent/private/**',
-    '.github/copilot-instructions.local.md',
-    '.cursor/rules/**/*.local.{mdc,md}',
-    '.cursor/rules-private/**',
     '.clinerules.local',
     '.clinerules/private/**',
-    '.windsurfrules.local',
+    '.cursor/rules/**/*.local.{mdc,md}',
+    '.cursor/rules-private/**',
+    '.github/copilot-instructions.local.md',
+    '.junie/guidelines.local.md',
+    '.kilocode/rules/*.local.md',
+    '.roo/rules/*.local.md',
     '.rules.local',
+    '.windsurfrules.local',
     'AGENTS.local.md',
-    'CONVENTIONS.local.md',
     'CLAUDE.local.md',
+    'CONVENTIONS.local.md',
     'GEMINI.local.md'
   ].join('\n')
   

@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, mkdirSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { importAll, exportToKilocode } from '../../src/index.js'
+import { importKilocode } from '../../src/importers.js'
 import type { RuleBlock } from '../../src/types.js'
 
 describe('Kilocode Integration Tests', () => {
@@ -100,7 +101,7 @@ Sensitive information.`)
       },
       {
         metadata: {
-          id: 'private/exported',
+          id: 'internal/exported',
           private: true,
           scope: 'private/**'
         },
@@ -125,8 +126,10 @@ Sensitive information.`)
     expect(publicContent).toMatch(/^---[\s\S]*alwaysApply: true[\s\S]*description: Exported public rule[\s\S]*---\n\n# Exported Public Content/)
     expect(publicContent).toContain('Follow best practices.')
 
-    // Check nested private
-    const privateDir = join(outputRulesDir, 'private')
+    // Check nested private - note: exportToKilocode creates directories based on ID,
+    // not based on metadata.private: true. The ID was renamed from 'private/exported'
+    // to 'internal/exported' to avoid naming overlap with the private/ directory concept.
+    const privateDir = join(outputRulesDir, 'internal')
     expect(readdirSync(privateDir)).toContain('exported.md')
     const privateContent = readFileSync(join(privateDir, 'exported.md'), 'utf-8')
     expect(privateContent).toMatch(/private: true/)
@@ -231,5 +234,101 @@ This should be preserved after import/export.`)
 
     const privateContent = readFileSync(join(rulesDir2, 'private.md'), 'utf-8')
     expect(privateContent).toMatch(/private: true/)
+  })
+
+  it('memory-bank directory is skipped from regular rule imports', async () => {
+    // Create .kilocode/rules directory with memory-bank subdirectory
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    // Create a regular rule
+    writeFileSync(join(rulesDir, 'regular-rule.md'), `---
+id: regular-rule
+description: Regular rule
+---
+# Regular Rule Content
+This is a regular rule.`)
+
+    // Create a file in memory-bank (should be skipped from regular imports)
+    writeFileSync(join(memoryBankDir, 'tasks.md'), `# Tasks
+- Task 1
+- Task 2`)
+
+    writeFileSync(join(memoryBankDir, 'context.md'), `# Context
+Project context.`)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // Only the regular rule should be imported
+    expect(kilocodeResult!.rules).toHaveLength(1)
+    expect(kilocodeResult!.rules[0].metadata.id).toBe('regular-rule')
+    
+    // Warning about memory-bank should be present
+    expect(warnings).toContain('memory-bank/tasks.md imported to .agents/common-tasks.md')
+    
+    // Verify memory-bank files are not in rules
+    const ruleIds = kilocodeResult!.rules.map(r => r.metadata.id)
+    expect(ruleIds).not.toContain('memory-bank/tasks')
+    expect(ruleIds).not.toContain('memory-bank/context')
+  })
+
+  it('memory-bank/tasks.md is imported to .agents/common-tasks.md when target does not exist', async () => {
+    // Create .kilocode/rules directory with memory-bank/tasks.md
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    const tasksContent = `# Common Tasks
+- Write tests
+- Review code
+- Deploy`
+    writeFileSync(join(memoryBankDir, 'tasks.md'), tasksContent)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // Check that common-tasks.md was created
+    const commonTasksPath = join(tempDir, '.agents', 'common-tasks.md')
+    expect(existsSync(commonTasksPath)).toBe(true)
+    
+    const importedContent = readFileSync(commonTasksPath, 'utf-8')
+    expect(importedContent).toBe(tasksContent)
+    
+    // Warning should indicate successful import
+    expect(warnings).toContain('memory-bank/tasks.md imported to .agents/common-tasks.md')
+  })
+
+  it('warning is shown when .agents/common-tasks.md already exists (no overwrite)', async () => {
+    // Create .kilocode/rules directory with memory-bank/tasks.md
+    const rulesDir = join(tempDir, '.kilocode', 'rules')
+    const memoryBankDir = join(rulesDir, 'memory-bank')
+    mkdirSync(memoryBankDir, { recursive: true })
+
+    const memoryBankTasksContent = '# Memory Bank Tasks\n- Task from memory bank'
+    writeFileSync(join(memoryBankDir, 'tasks.md'), memoryBankTasksContent)
+
+    // Create existing .agents/common-tasks.md
+    const agentsDir = join(tempDir, '.agents')
+    mkdirSync(agentsDir, { recursive: true })
+    const existingContent = '# Existing Tasks\n- Existing task'
+    writeFileSync(join(agentsDir, 'common-tasks.md'), existingContent)
+
+    const { results, warnings } = await importAll(tempDir)
+
+    const kilocodeResult = results.find(r => r.format === 'kilocode')
+    expect(kilocodeResult).toBeDefined()
+    
+    // common-tasks.md should NOT be overwritten
+    const commonTasksPath = join(tempDir, '.agents', 'common-tasks.md')
+    expect(readFileSync(commonTasksPath, 'utf-8')).toBe(existingContent)
+    
+    // Warning should indicate the file wasn't imported
+    expect(warnings.some(w => w.includes('memory-bank/tasks.md found but .agents/common-tasks.md already exists'))).toBe(true)
   })
 })

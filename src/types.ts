@@ -25,11 +25,13 @@ export interface ImportResult {
   filePath: string
   rules: RuleBlock[]
   raw?: string
+  warnings?: string[]
 }
 
 export interface ImportResults {
   results: ImportResult[]
   errors: Array<{ file: string; error: string }>
+  warnings: string[]
 }
 
 export interface ExportOptions {
