@@ -153,6 +153,16 @@ export async function importAll(repoPath: string): Promise<ImportResults> {
       errors.push({ file: claudeMd, error: String(e) })
     }
   }
+
+  // Check for Claude Code rules directory (.claude/rules/)
+  const claudeRulesDir = join(repoPath, '.claude', 'rules')
+  if (existsSync(claudeRulesDir)) {
+    try {
+      results.push(importClaudeCodeRules(claudeRulesDir))
+    } catch (e) {
+      errors.push({ file: claudeRulesDir, error: String(e) })
+    }
+  }
   
   // Check for AGENTS.md (OpenCode)
   const opencodeMd = join(repoPath, 'AGENTS.md')
@@ -665,6 +675,71 @@ export function importClaudeCode(filePath: string): ImportResult {
     filePath,
     rules,
     raw: content
+  }
+}
+
+export function importClaudeCodeRules(rulesDir: string): ImportResult {
+  const rules: RuleBlock[] = []
+
+  function findMdFiles(dir: string, relativePath = ''): void {
+    const entries = readdirSync(dir, { withFileTypes: true })
+
+    entries.sort((a: Dirent, b: Dirent) => {
+      if (a.isDirectory() && !b.isDirectory()) return -1
+      if (!a.isDirectory() && b.isDirectory()) return 1
+      return a.name.localeCompare(b.name)
+    })
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name)
+      const relPath = relativePath ? join(relativePath, entry.name) : entry.name
+
+      if (entry.isDirectory()) {
+        findMdFiles(fullPath, relPath)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const content = readFileSync(fullPath, 'utf-8')
+        const { data, content: body } = matter(content, grayMatterOptions)
+
+        let segments = relPath
+          .replace(/\.md$/, '')
+          .replace(/\\/g, '/')
+          .split('/')
+          .map((s: string) => s.replace(/^\d{2,}-/, '').replace(/\.local$/, ''))
+        if (segments[0] === 'private') segments = segments.slice(1)
+        const defaultId = segments.join('/')
+
+        const isPrivateFile = isPrivateRule(fullPath)
+
+        const metadata: any = {
+          id: data.id || defaultId,
+          description: data.description,
+          alwaysApply: data.alwaysApply ?? false,
+        }
+
+        // Map globs → scope for cross-format compatibility
+        if (data.globs) {
+          metadata.globs = data.globs
+          metadata.scope = data.globs
+        }
+
+        if (data.private === true || (data.private === undefined && isPrivateFile)) {
+          metadata.private = true
+        }
+
+        rules.push({
+          metadata,
+          content: body.trim()
+        })
+      }
+    }
+  }
+
+  findMdFiles(rulesDir)
+
+  return {
+    format: 'claude',
+    filePath: rulesDir,
+    rules
   }
 }
 

@@ -15,6 +15,7 @@ export {
   importCodex,
   importAider,
   importClaudeCode,
+  importClaudeCodeRules,
   importOpenCode,
   importGemini,
   importQodo,

@@ -16,7 +16,7 @@ describe('Conditional export smoke tests for single-file formats', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('should export to CLAUDE.md with conditional rules section', () => {
+  it('should export to Claude Code with always-apply in CLAUDE.md and scoped in .claude/rules/', () => {
     // Create a realistic .agent directory structure
     const agentDir = join(tempDir, '.agent')
     mkdirSync(agentDir, { recursive: true })
@@ -119,43 +119,42 @@ description: Deployment process
 
     // Import all rules
     const result = importAgent(agentDir)
-    
-    // Export to CLAUDE.md
-    const claudePath = join(tempDir, 'CLAUDE.md')
-    exportToClaudeCode(result.rules, claudePath)
-    
-    const content = readFileSync(claudePath, 'utf-8')
-    
-    // Verify always-apply rules are in the main content
-    expect(content).toContain('# Code Style Guidelines')
-    expect(content).toContain('Use 2 spaces for indentation')
-    expect(content).toContain('# Git Workflow')
-    expect(content).toContain('Write clear commit messages')
-    
-    // Verify conditional rules section exists
-    expect(content).toContain('## Context-Specific Rules')
-    
-    // Verify scope-based rules
-    expect(content).toContain('When working with files matching `**/*.ts`, also apply:')
-    expect(content).toContain('→ [typescript](.agent/typescript.md) - TypeScript specific rules')
-    
-    expect(content).toContain('When working with files matching `**/*.tsx`, also apply:')
-    expect(content).toContain('→ [react-components](.agent/react-components.md) - React component guidelines')
-    
-    // Verify description-based rules
-    expect(content).toContain('When working with database operations, SQL queries, and data modeling, also apply:')
-    expect(content).toContain('→ [database](.agent/database.md)')
-    
-    // Verify workflows section
-    expect(content).toContain('## Workflows')
-    expect(content).toContain('→ [workflows/pr-review](.agent/workflows/pr-review.md) - Pull request review checklist')
-    expect(content).toContain('→ [workflows/deployment](.agent/workflows/deployment.md) - Deployment process')
-    
-    // Verify conditional content is NOT in the main section
-    expect(content.indexOf('# TypeScript Rules')).toBe(-1)
-    expect(content.indexOf('# React Component Guidelines')).toBe(-1)
-    expect(content.indexOf('# Database Best Practices')).toBe(-1)
-    expect(content.indexOf('# PR Review Checklist')).toBe(-1)
+
+    // Export to Claude Code format
+    exportToClaudeCode(result.rules, tempDir)
+
+    // Verify CLAUDE.md has always-apply rules
+    const claudeContent = readFileSync(join(tempDir, 'CLAUDE.md'), 'utf-8')
+    expect(claudeContent).toContain('# Code Style Guidelines')
+    expect(claudeContent).toContain('Use 2 spaces for indentation')
+    expect(claudeContent).toContain('# Git Workflow')
+    expect(claudeContent).toContain('Write clear commit messages')
+
+    // Verify CLAUDE.md does NOT contain conditional rules content
+    expect(claudeContent).not.toContain('# TypeScript Rules')
+    expect(claudeContent).not.toContain('# React Component Guidelines')
+    expect(claudeContent).not.toContain('# Database Best Practices')
+    expect(claudeContent).not.toContain('# PR Review Checklist')
+
+    // Verify scoped rules are in .claude/rules/
+    const rulesDir = join(tempDir, '.claude', 'rules')
+    expect(existsSync(join(rulesDir, 'typescript.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'react-components.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'database.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'workflows', 'pr-review.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'workflows', 'deployment.md'))).toBe(true)
+
+    // Verify frontmatter in scoped rule files
+    const tsContent = readFileSync(join(rulesDir, 'typescript.md'), 'utf-8')
+    expect(tsContent).toContain('description: TypeScript specific rules')
+    expect(tsContent).toContain('alwaysApply: false')
+    expect(tsContent).toContain('**/*.ts')
+    expect(tsContent).toContain('Use strict mode')
+
+    const reactContent = readFileSync(join(rulesDir, 'react-components.md'), 'utf-8')
+    expect(reactContent).toContain('description: React component guidelines')
+    expect(reactContent).toContain('**/*.tsx')
+    expect(reactContent).toContain('**/components/**')
   })
 
   it('should export to different single-file formats with correct separators', () => {
@@ -184,10 +183,10 @@ description: Testing guidelines
 Write comprehensive tests.`)
 
     const result = importAgent(agentDir)
-    
+
     // Test different export formats
     const formats = [
-      { 
+      {
         path: join(tempDir, '.github', 'copilot-instructions.md'),
         exporter: exportToCopilot,
         separator: '---'
@@ -208,31 +207,31 @@ Write comprehensive tests.`)
         separator: null
       }
     ]
-    
+
     formats.forEach(({ path, exporter, separator }) => {
       exporter(result.rules, path)
       const content = readFileSync(path, 'utf-8')
-      
+
       // All should have main content
       expect(content).toContain('# Main Rules')
       expect(content).toContain('Always follow these guidelines.')
-      
+
       // All should have conditional section
       expect(content).toContain('## Context-Specific Rules')
       expect(content).toContain('When working with files matching `**/*.test.{js,ts}`, also apply:')
       expect(content).toContain('→ [testing](.agent/testing.md) - Testing guidelines')
-      
+
       // Check separator if applicable
       if (separator) {
         expect(content).toContain(`\n\n${separator}\n\n## Context-Specific Rules`)
       }
-      
+
       // Conditional content should not be in main section
       expect(content.indexOf('# Testing Guidelines')).toBe(-1)
     })
   })
 
-  it('should handle complex real-world scenario with multiple rule types', () => {
+  it('should handle complex real-world scenario with multiple rule types via exportAll', () => {
     const agentDir = join(tempDir, '.agent')
     const dirs = {
       frontend: join(agentDir, 'frontend'),
@@ -240,7 +239,7 @@ Write comprehensive tests.`)
       workflows: join(agentDir, 'workflows'),
       testing: join(agentDir, 'testing')
     }
-    
+
     // Create all directories
     Object.values(dirs).forEach(dir => mkdirSync(dir, { recursive: true }))
 
@@ -333,58 +332,33 @@ description: Release management
 
 How to cut a release.`)
 
-    // Import and export
+    // Import and export all
     const result = importAgent(agentDir)
     exportAll(result.rules, tempDir, false)
-    
-    // Check CLAUDE.md
+
+    // Check CLAUDE.md has always-apply content only
     const claudePath = join(tempDir, 'CLAUDE.md')
     expect(existsSync(claudePath)).toBe(true)
     const claudeContent = readFileSync(claudePath, 'utf-8')
-    
-    // Verify structure
-    const sections = claudeContent.split('\n## ')
-    
-    // Should have main content, Context-Specific Rules, and Workflows
-    expect(sections.length).toBeGreaterThanOrEqual(3)
-    
-    // Check main content
     expect(claudeContent).toContain('# Project Standards')
-    
-    // Check Context-Specific Rules section exists and has correct content
-    const contextSection = sections.find(s => s.startsWith('Context-Specific Rules'))
-    expect(contextSection).toBeDefined()
-    
-    // Frontend rules
-    expect(contextSection).toContain('When working with files matching `src/components/**/*.tsx`, also apply:')
-    expect(contextSection).toContain('→ [frontend/react-patterns](.agent/frontend/react-patterns.md) - React best practices')
-    expect(contextSection).toContain('When working with files matching `**/*.{css,scss}`, also apply:')
-    expect(contextSection).toContain('→ [frontend/styling](.agent/frontend/styling.md) - CSS and styling guidelines')
-    
-    // Backend rules
-    expect(contextSection).toContain('When working with files matching `src/api/**/*.ts`, also apply:')
-    expect(contextSection).toContain('→ [backend/api-design](.agent/backend/api-design.md) - REST API design principles')
-    
-    // Testing rules
-    expect(contextSection).toContain('When working with files matching `**/*.test.ts`, also apply:')
-    expect(contextSection).toContain('→ [testing/unit-tests](.agent/testing/unit-tests.md) - Unit testing standards')
-    
-    // Check Workflows section
-    const workflowsSection = sections.find(s => s.startsWith('Workflows'))
-    expect(workflowsSection).toBeDefined()
-    expect(workflowsSection).toContain('→ [workflows/code-review](.agent/workflows/code-review.md) - Code review process')
-    expect(workflowsSection).toContain('→ [workflows/release](.agent/workflows/release.md) - Release management')
-    
-    // Check Backend section (for backend/security which has no scope)
-    const backendSection = sections.find(s => s.startsWith('Backend'))
-    expect(backendSection).toBeDefined()
-    expect(backendSection).toContain('→ [backend/security](.agent/backend/security.md) - security, authentication, and authorization')
-    
-    // Verify no conditional content in main section
-    const mainContent = sections[0] // Content before first ##
-    expect(mainContent).not.toContain('# React Patterns')
-    expect(mainContent).not.toContain('# API Design')
-    expect(mainContent).not.toContain('# Code Review Process')
+    expect(claudeContent).not.toContain('# React Patterns')
+    expect(claudeContent).not.toContain('# API Design')
+
+    // Check scoped rules in .claude/rules/
+    const rulesDir = join(tempDir, '.claude', 'rules')
+    expect(existsSync(join(rulesDir, 'frontend', 'react-patterns.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'frontend', 'styling.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'backend', 'api-design.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'backend', 'security.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'testing', 'unit-tests.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'workflows', 'code-review.md'))).toBe(true)
+    expect(existsSync(join(rulesDir, 'workflows', 'release.md'))).toBe(true)
+
+    // Verify Copilot still uses single-file conditional section
+    const copilotPath = join(tempDir, '.github', 'copilot-instructions.md')
+    const copilotContent = readFileSync(copilotPath, 'utf-8')
+    expect(copilotContent).toContain('## Context-Specific Rules')
+    expect(copilotContent).toContain('When working with files matching')
   })
 
   it('should handle edge cases gracefully', () => {
@@ -405,7 +379,7 @@ Go language specifics.`)
     // Rule in folder but with scope (should appear in scope section, not folder section)
     const utilsDir = join(agentDir, 'utils')
     mkdirSync(utilsDir)
-    
+
     writeFileSync(join(utilsDir, 'helpers.md'), `---
 id: utils/helpers
 alwaysApply: false
@@ -429,24 +403,24 @@ description: Logging best practices
 How to implement logging.`)
 
     const result = importAgent(agentDir)
-    const claudePath = join(tempDir, 'CLAUDE.md')
-    exportToClaudeCode(result.rules, claudePath)
-    
-    const content = readFileSync(claudePath, 'utf-8')
-    
-    // Should have Context-Specific Rules
-    expect(content).toContain('## Context-Specific Rules')
-    
-    // no-description should be in scope section only
-    expect(content).toContain('When working with files matching `**/*.go`, also apply:')
-    expect(content).toContain('→ [no-description](.agent/no-description.md)')
-    
-    // utils/helpers should be in scope section (not Utils section)
-    expect(content).toContain('When working with files matching `src/utils/**`, also apply:')
-    expect(content).toContain('→ [utils/helpers](.agent/utils/helpers.md) - Utility function guidelines')
-    
-    // utils/logging should be in Utils section
-    expect(content).toContain('## Utils')
-    expect(content).toContain('→ [utils/logging](.agent/utils/logging.md) - Logging best practices')
+    exportToClaudeCode(result.rules, tempDir)
+
+    // No always-apply rules, so no CLAUDE.md
+    expect(existsSync(join(tempDir, 'CLAUDE.md'))).toBe(false)
+
+    // All scoped rules should be in .claude/rules/
+    const rulesDir = join(tempDir, '.claude', 'rules')
+
+    const noDescContent = readFileSync(join(rulesDir, 'no-description.md'), 'utf-8')
+    expect(noDescContent).toContain('**/*.go')
+    expect(noDescContent).toContain('alwaysApply: false')
+
+    const helpersContent = readFileSync(join(rulesDir, 'utils', 'helpers.md'), 'utf-8')
+    expect(helpersContent).toContain('src/utils/**')
+    expect(helpersContent).toContain('description: Utility function guidelines')
+
+    const loggingContent = readFileSync(join(rulesDir, 'utils', 'logging.md'), 'utf-8')
+    expect(loggingContent).toContain('description: Logging best practices')
+    expect(loggingContent).toContain('alwaysApply: false')
   })
 })
