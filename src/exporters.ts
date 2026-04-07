@@ -402,7 +402,7 @@ export function exportToClaudeCode(rules: RuleBlock[], outputDir: string, option
 
     const claudeMdPath = join(outputDir, 'CLAUDE.md')
     ensureDirectoryExists(claudeMdPath)
-    writeFileSync(claudeMdPath, mainContent, 'utf-8')
+    writeFileSync(claudeMdPath, mainContent + '\n', 'utf-8')
   }
 
   // Scoped rules → .claude/rules/ as individual files with frontmatter
