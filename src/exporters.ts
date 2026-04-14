@@ -385,8 +385,68 @@ export function exportToAider(rules: RuleBlock[], outputPath: string, options?: 
   writeFileSync(outputPath, fullContent, 'utf-8')
 }
 
-export function exportToClaudeCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
-  exportSingleFileWithHeaders(rules, outputPath, options)
+export function exportToClaudeCode(rules: RuleBlock[], outputDir: string, options?: ExportOptions): void {
+  const filteredRules = rules.filter(rule => !rule.metadata.private || options?.includePrivate)
+
+  const alwaysApplyRules = filteredRules.filter(r => r.metadata.alwaysApply !== false)
+  const scopedRules = filteredRules.filter(r => r.metadata.alwaysApply === false)
+
+  // Always-apply rules → CLAUDE.md
+  if (alwaysApplyRules.length > 0) {
+    const mainContent = alwaysApplyRules
+      .map(rule => {
+        const header = rule.metadata.description ? `# ${rule.metadata.description}\n\n` : ''
+        return header + rule.content
+      })
+      .join('\n\n')
+
+    const claudeMdPath = join(outputDir, 'CLAUDE.md')
+    ensureDirectoryExists(claudeMdPath)
+    writeFileSync(claudeMdPath, mainContent + '\n', 'utf-8')
+  }
+
+  // Scoped rules → .claude/rules/ as individual files with frontmatter
+  if (scopedRules.length > 0) {
+    const rulesDir = join(outputDir, '.claude', 'rules')
+    mkdirSync(rulesDir, { recursive: true })
+
+    for (const rule of scopedRules) {
+      let filePath: string
+
+      if (rule.metadata.id && rule.metadata.id.includes('/')) {
+        const parts = rule.metadata.id.split('/')
+        const fileName = parts.pop() + '.md'
+        const subDir = join(rulesDir, ...parts)
+        mkdirSync(subDir, { recursive: true })
+        filePath = join(subDir, fileName)
+      } else {
+        const filename = `${rule.metadata.id || 'rule'}.md`
+        filePath = join(rulesDir, filename)
+      }
+
+      // Claude Code frontmatter only supports description, globs, alwaysApply
+      const frontMatter: Record<string, unknown> = {}
+
+      if (rule.metadata.description !== undefined && rule.metadata.description !== null) {
+        frontMatter.description = rule.metadata.description
+      }
+
+      // Map scope → globs when globs is not already set
+      const globs = rule.metadata.globs ?? (
+        rule.metadata.scope
+          ? (Array.isArray(rule.metadata.scope) ? rule.metadata.scope : [rule.metadata.scope])
+          : undefined
+      )
+      if (globs !== undefined) {
+        frontMatter.globs = globs
+      }
+
+      frontMatter.alwaysApply = rule.metadata.alwaysApply ?? false
+
+      const mdContent = matter.stringify(rule.content, frontMatter, grayMatterOptions)
+      writeFileSync(filePath, mdContent, 'utf-8')
+    }
+  }
 }
 
 export function exportToOpenCode(rules: RuleBlock[], outputPath: string, options?: ExportOptions): void {
@@ -554,7 +614,7 @@ export function exportAll(rules: RuleBlock[], repoPath: string, dryRun = false, 
     exportToZed(rules, join(repoPath, '.rules'), options)
     exportToCodex(rules, join(repoPath, 'AGENTS.md'), options)
     exportToAider(rules, join(repoPath, 'CONVENTIONS.md'), options)
-    exportToClaudeCode(rules, join(repoPath, 'CLAUDE.md'), options)
+    exportToClaudeCode(rules, repoPath, options)
     exportToOpenCode(rules, join(repoPath, 'AGENTS.md'), options)
     exportToGemini(rules, join(repoPath, 'GEMINI.md'), options)
     exportToQodo(rules, join(repoPath, 'best_practices.md'), options)

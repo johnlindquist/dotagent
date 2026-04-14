@@ -176,10 +176,11 @@ node_modules/
 AGENTS.md
 CONVENTIONS.md
 CLAUDE.md
+.claude/rules/**
 GEMINI.md
 best_practices.md
 `)
-    
+
     // Get the initial gitignore content
     const initialContent = readFileSync(gitignorePath, 'utf-8')
 

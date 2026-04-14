@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, appendFileSync, rmSync, statSync } from 'fs'
 import { join, resolve, dirname } from 'path'
 import { parseArgs } from 'util'
 import { importAll, importAgent, exportToAgent, exportAll, exportToCopilot, exportToCursor, exportToCline, exportToWindsurf, exportToZed, exportToCodex, exportToAider, exportToClaudeCode, exportToGemini, exportToQodo, importRoo, exportToRoo, exportToJunie, importOpenCode, exportToOpenCode } from './index.js'
@@ -107,6 +107,7 @@ async function main() {
           '.rules',
           'AGENTS.md',
           'CLAUDE.md',
+          '.claude/rules/*.md',
           'GEMINI.md',
           'best_practices.md'
         ]))
@@ -190,7 +191,7 @@ async function main() {
         { name: 'Zed (.rules)', value: 'zed' },
         { name: 'OpenAI Codex (AGENTS.md)', value: 'codex' },
         { name: 'Aider (CONVENTIONS.md)', value: 'aider' },
-        { name: 'Claude Code (CLAUDE.md)', value: 'claude' },
+        { name: 'Claude Code (CLAUDE.md + .claude/rules/)', value: 'claude' },
         { name: 'Gemini CLI (GEMINI.md)', value: 'gemini' },
         { name: 'Qodo Merge (best_practices.md)', value: 'qodo' },
         { name: 'Roo Code (.roo/rules/)', value: 'roo' },
@@ -246,6 +247,7 @@ async function main() {
             'AGENTS.md',
             'CONVENTIONS.md',
             'CLAUDE.md',
+            '.claude/rules/',
             'GEMINI.md',
             'best_practices.md'
           )
@@ -290,9 +292,9 @@ async function main() {
               exportedPaths.push('CONVENTIONS.md')
               break
             case 'claude':
-              exportPath = join(outputDir, 'CLAUDE.md')
-              if (!isDryRun) exportToClaudeCode(rules, exportPath, options)
-              exportedPaths.push('CLAUDE.md')
+              if (!isDryRun) exportToClaudeCode(rules, outputDir, options)
+              exportPath = join(outputDir, '.claude/rules/')
+              exportedPaths.push('CLAUDE.md', '.claude/rules/')
               break
             case 'gemini':
               exportPath = join(outputDir, 'GEMINI.md')
@@ -382,7 +384,7 @@ async function main() {
         else if (inputPath.includes('.windsurfrules')) format = 'windsurf'
         else if (inputPath.endsWith('.rules')) format = 'zed'
         else if (inputPath.endsWith('AGENTS.md')) format = 'codex'
-        else if (inputPath.endsWith('CLAUDE.md')) format = 'claude'
+        else if (inputPath.endsWith('CLAUDE.md') || inputPath.includes('.claude/rules')) format = 'claude'
         else if (inputPath.endsWith('GEMINI.md')) format = 'gemini'
         else if (inputPath.endsWith('CONVENTIONS.md')) format = 'aider'
         else if (inputPath.endsWith('best_practices.md')) format = 'qodo'
@@ -398,7 +400,7 @@ async function main() {
       console.log(`Input: ${color.path(inputPath)}`)
 
       // Import using appropriate importer
-      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importGemini, importQodo } = await import('./importers.js')
+      const { importCopilot, importCursor, importCline, importWindsurf, importZed, importCodex, importAider, importClaudeCode, importClaudeCodeRules, importGemini, importQodo } = await import('./importers.js')
       
       let result
       switch (format) {
@@ -424,7 +426,9 @@ async function main() {
           result = importAider(inputPath)
           break
         case 'claude':
-          result = importClaudeCode(inputPath)
+          result = statSync(inputPath).isDirectory()
+            ? importClaudeCodeRules(inputPath)
+            : importClaudeCode(inputPath)
           break
         case 'opencode':
           result = importOpenCode(inputPath)

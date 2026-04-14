@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, readFileSync } from 'fs'
+import { mkdtempSync, rmSync, readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { exportToCopilot, exportToClaudeCode, exportToWindsurf } from '../src/exporters.js'
-import type { RuleBlock } from '../src/types.js'
+import { exportToCopilot, exportToClaudeCode, exportToWindsurf } from '../src'
+import type { RuleBlock } from '../src'
 
 describe('Conditional rules export', () => {
   let tempDir: string
@@ -67,7 +67,7 @@ describe('Conditional rules export', () => {
     expect(content).not.toContain('Use strict mode.')
   })
 
-  it('should export conditional rules with description keywords', () => {
+  it('should export scoped rules to .claude/rules/ directory', () => {
     const rules: RuleBlock[] = [
       {
         metadata: {
@@ -86,18 +86,22 @@ describe('Conditional rules export', () => {
       }
     ]
 
-    const outputPath = join(tempDir, 'CLAUDE.md')
-    exportToClaudeCode(rules, outputPath)
+    exportToClaudeCode(rules, tempDir)
 
-    const content = readFileSync(outputPath, 'utf-8')
-    
-    expect(content).toContain('Always apply this rule.')
-    expect(content).toContain('## Context-Specific Rules')
-    expect(content).toContain('When working with database queries and SQL operations, also apply:')
-    expect(content).toContain('→ [database-patterns](.agent/database-patterns.md)')
+    // Always-apply rule should be in CLAUDE.md
+    const claudeMd = readFileSync(join(tempDir, 'CLAUDE.md'), 'utf-8')
+    expect(claudeMd).toContain('Always apply this rule.')
+
+    // Scoped rule should be in .claude/rules/ as individual file
+    const rulePath = join(tempDir, '.claude', 'rules', 'database-patterns.md')
+    expect(existsSync(rulePath)).toBe(true)
+    const ruleContent = readFileSync(rulePath, 'utf-8')
+    expect(ruleContent).toContain('description: database queries and SQL operations')
+    expect(ruleContent).toContain('alwaysApply: false')
+    expect(ruleContent).toContain('Use parameterized queries.')
   })
 
-  it('should create workflow sections for folder-based rules', () => {
+  it('should export nested folder-based rules to .claude/rules/', () => {
     const rules: RuleBlock[] = [
       {
         metadata: {
@@ -124,14 +128,17 @@ describe('Conditional rules export', () => {
       }
     ]
 
-    const outputPath = join(tempDir, 'AGENTS.md')
-    exportToClaudeCode(rules, outputPath)
+    exportToClaudeCode(rules, tempDir)
 
-    const content = readFileSync(outputPath, 'utf-8')
-    
-    expect(content).toContain('## Workflows')
-    expect(content).toContain('→ [workflows/pr-review](.agent/workflows/pr-review.md) - Pull request review workflow')
-    expect(content).toContain('→ [workflows/deployment](.agent/workflows/deployment.md) - Deployment workflow')
+    // Nested rules should be in subdirectories
+    const prPath = join(tempDir, '.claude', 'rules', 'workflows', 'pr-review.md')
+    const deployPath = join(tempDir, '.claude', 'rules', 'workflows', 'deployment.md')
+    expect(existsSync(prPath)).toBe(true)
+    expect(existsSync(deployPath)).toBe(true)
+
+    const prContent = readFileSync(prPath, 'utf-8')
+    expect(prContent).toContain('PR review steps')
+    expect(prContent).toContain('description: Pull request review workflow')
   })
 
   it('should not add conditional section when all rules have alwaysApply', () => {
